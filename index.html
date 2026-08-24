@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="TENKEY measures numeric keypad accuracy and speed (KPH) with a check-totals simulation."
+      content="TENKEY measures numeric keypad accuracy and speed (KPH) for check processing and transcription."
     />
     <title>TENKEY — check totals</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,8 +15,8 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Fraunces:opsz,wght@9..144,560;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Patrick+Hand&display=swap"
       rel="stylesheet"
     />
-    <script type="module" crossorigin src="./assets/index-DRl283we.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BlZg2bsH.css">
+    <script type="module" crossorigin src="./assets/index-Bjx-AJzG.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-UHAeTe6C.css">
   </head>
   <body>
     <div class="desk">
@@ -25,13 +25,13 @@
           <span class="brand-mark">10</span>
           <div>
             <strong>TENKEY</strong>
-            <em>check totals</em>
+            <em id="brand-tagline">check totals</em>
           </div>
           <span class="version-stamp" id="version-stamp" title="App version">v0.0.1</span>
         </div>
         <div id="live-stats" class="live-stats" hidden>
           <div id="stat-progress-wrap" hidden>
-            <span>stack</span><strong id="stat-progress">0/25</strong>
+            <span id="stat-progress-label">stack</span><strong id="stat-progress">0/25</strong>
           </div>
           <div><span id="stat-time-label">time</span><strong id="stat-time">1:00</strong></div>
           <div><span>net kph</span><strong id="stat-kph">—</strong></div>
@@ -43,8 +43,22 @@
       <main>
         <section id="setup" class="panel">
           <div class="ticket">
-            <p class="kicker">Station 4 · Check processing</p>
-            <h1>Add the stack. Slide the check.</h1>
+            <div class="field source-field">
+              <span>Work</span>
+              <div id="source-pills" class="pills">
+                <button type="button" data-source="checks" class="is-on">Checks</button>
+                <button type="button" data-source="transcription">Transcription</button>
+              </div>
+              <p class="fine" id="source-checks-note">
+                One check at a time. Fonts, sizes, and handwriting vary. Tab slides the stack. Own scores.
+              </p>
+              <p class="fine" id="source-trans-note" hidden>
+                A printed list of amounts. You can read ahead. Own scores, separate from check processing.
+              </p>
+            </div>
+
+            <p class="kicker" id="kicker">Station 4 · Check processing</p>
+            <h1 id="headline">Add the stack. Slide the check.</h1>
             <p class="lede" id="lede">
               Type each amount. <kbd>+</kbd> and <kbd>Tab</kbd> can happen in
               either order — add, then slide, or start sliding before you hit
@@ -67,13 +81,13 @@
             <div class="field">
               <span>Length</span>
               <div id="length-pills" class="pills">
-                <button type="button" data-length="stack" class="is-on">Stack</button>
+                <button type="button" data-length="stack" id="length-stack-btn" class="is-on">Stack</button>
                 <button type="button" data-length="time">Timed</button>
               </div>
             </div>
 
             <div class="field" id="stack-field">
-              <span>Stack size</span>
+              <span id="stack-heading">Stack size</span>
               <div id="stack-pills" class="pills">
                 <button type="button" data-stack="10">10</button>
                 <button type="button" data-stack="25" class="is-on">25</button>
@@ -81,7 +95,7 @@
                 <button type="button" data-stack="75">75</button>
                 <button type="button" data-stack="100">100</button>
               </div>
-              <p class="fine">Work through the whole stack. The clock is only for KPH.</p>
+              <p class="fine" id="stack-note">Work through the whole stack. The clock is only for KPH.</p>
             </div>
 
             <div class="field" id="duration-field" hidden>
@@ -93,7 +107,7 @@
                 <button type="button" data-ms="300000">5:00</button>
                 <button type="button" data-ms="600000">10:00</button>
               </div>
-              <p class="fine">Infinite stack until time runs out.</p>
+              <p class="fine" id="duration-note">Infinite stack until time runs out.</p>
             </div>
 
             <div class="field">
@@ -106,7 +120,7 @@
                 <kbd>+</kbd> adds toward the total. The tape spools up on the right.
               </p>
               <p class="fine" id="desk-sheet-note" hidden>
-                <kbd>Enter</kbd> commits the cell and you work down the column. Tab still slides the check.
+                <kbd>Enter</kbd> commits the cell and you work down the column.
               </p>
             </div>
 
@@ -126,11 +140,17 @@
 
             <details class="help">
               <summary>How it works</summary>
-              <ol class="howto">
+              <ol class="howto" id="howto-checks">
                 <li>Read the amount in the box on the top check.</li>
                 <li>Enter it on the 10-key. You may skip trailing zeros after the decimal (<code>4</code> for $4.00, <code>73.7</code> for $73.70) and a leading zero before it (<code>.07</code> for $0.07 — not <code>.7</code>, that is $0.70).</li>
                 <li id="howto-commit">Press <kbd>+</kbd> to add toward the total, and <kbd>Tab</kbd> to slide — either order.</li>
                 <li><kbd>Shift</kbd>+<kbd>Tab</kbd> pulls the last check back if you Tabbed too soon.</li>
+                <li>Alpha and stray keys show on the display and must be corrected.</li>
+              </ol>
+              <ol class="howto" id="howto-transcription" hidden>
+                <li>The amounts are printed on the list. You can read ahead.</li>
+                <li>Enter each one on the 10-key. You may skip trailing zeros after the decimal (<code>4</code> for $4.00, <code>73.7</code> for $73.70) and a leading zero before it (<code>.07</code> for $0.07 — not <code>.7</code>, that is $0.70).</li>
+                <li id="howto-trans-commit">Press <kbd>+</kbd> to add and move to the next line.</li>
                 <li>Alpha and stray keys show on the display and must be corrected.</li>
               </ol>
               <p class="fine numpad-note">
@@ -156,8 +176,8 @@
           </aside>
         </section>
 
-        <section id="test" class="panel workspace" hidden>
-          <div class="stack-area">
+        <section id="test" class="panel workspace" hidden data-source="checks">
+          <div class="stack-area" data-source-ui="checks">
             <div class="stack">
               <div class="paper peek p3" data-peek="3"></div>
               <div class="paper peek p2" data-peek="2"></div>
@@ -201,8 +221,20 @@
                 </footer>
               </article>
             </div>
-            <p class="hint" id="hint"></p>
           </div>
+          <div class="readoff-area" data-source-ui="transcription">
+            <article class="readoff" id="readoff">
+              <header>
+                <div>
+                  <strong>Read-off</strong>
+                  <span>Uniform print · read ahead</span>
+                </div>
+                <em id="readoff-meta">25 amounts</em>
+              </header>
+              <ol class="readoff-list" id="readoff-list"></ol>
+            </article>
+          </div>
+          <p class="hint" id="hint"></p>
 
           <aside class="machine" id="live-machine" data-desk="calculator">
             <div class="tape-house" data-desk-ui="calculator">
@@ -289,7 +321,7 @@
               <div><dt>Corrected accuracy (incl. backspaces)</dt><dd id="res-corr-acc">0%</dd></div>
               <div><dt>Corrected errors</dt><dd id="res-corrected">0</dd></div>
               <div><dt>Uncorrected errors</dt><dd id="res-uncorrected">0</dd></div>
-              <div><dt>Checks correct</dt><dd id="res-checks">0 / 0</dd></div>
+              <div><dt id="res-items-label">Checks correct</dt><dd id="res-checks">0 / 0</dd></div>
               <div><dt>Entered total</dt><dd id="res-entered">$0.00</dd></div>
               <div><dt>True total</dt><dd id="res-true">$0.00</dd></div>
             </dl>
