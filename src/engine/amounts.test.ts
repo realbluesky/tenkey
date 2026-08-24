@@ -32,12 +32,15 @@ describe("parseEntry", () => {
     expect(parseEntry("50.00")).toBe(5000);
     expect(parseEntry("127.45")).toBe(12745);
     expect(parseEntry("0.07")).toBe(7);
+    expect(parseEntry(".07")).toBe(7);
+    expect(parseEntry(".7")).toBe(70);
+    expect(parseEntry(".70")).toBe(70);
   });
 
   it("rejects miskeys and extra precision", () => {
     expect(parseEntry("50a")).toBeNull();
     expect(parseEntry("12.345")).toBeNull();
-    expect(parseEntry(".50")).toBeNull();
+    expect(parseEntry(".")).toBeNull();
     expect(parseEntry("")).toBeNull();
   });
 });
@@ -65,13 +68,18 @@ describe("isAcceptable", () => {
     expect(isAcceptable(seventy, "73.70")).toBe(true);
     expect(isAcceptable(seventy, "73")).toBe(false);
     expect(isAcceptable(check({ cents: 10, wholeDollar: false }), "0.1")).toBe(true);
+    expect(isAcceptable(check({ cents: 10, wholeDollar: false }), ".1")).toBe(true);
     expect(isAcceptable(check({ cents: 1, wholeDollar: false }), "0.1")).toBe(false);
+    expect(isAcceptable(check({ cents: 7, wholeDollar: false }), ".7")).toBe(false);
+    expect(isAcceptable(check({ cents: 7, wholeDollar: false }), ".07")).toBe(true);
+    expect(isAcceptable(check({ cents: 7, wholeDollar: false }), "0.07")).toBe(true);
   });
 
   it("accepts the range edges", () => {
     const penny = check({ cents: 1, wholeDollar: false });
     const top = check({ cents: 999999, wholeDollar: false });
     expect(isAcceptable(penny, "0.01")).toBe(true);
+    expect(isAcceptable(penny, ".01")).toBe(true);
     expect(isAcceptable(top, "9999.99")).toBe(true);
     expect(isAcceptable(check({ cents: 999900, wholeDollar: true }), "9999")).toBe(true);
   });

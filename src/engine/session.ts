@@ -186,11 +186,19 @@ export class TenkeySession {
     }
 
     if (this.phase === "armed") {
-      if (!isDigitKey(input)) return empty;
-      this.startedAt = now;
-      this.phase = "entering";
-      this.pushDigit(input, now);
-      return { ...empty, kind: "digit", started: true };
+      if (isDigitKey(input)) {
+        this.startedAt = now;
+        this.phase = "entering";
+        this.pushDigit(input, now);
+        return { ...empty, kind: "digit", started: true };
+      }
+      if (isDecimalKey(input)) {
+        this.startedAt = now;
+        this.phase = "entering";
+        const started = this.handleEntering(input, now);
+        return { ...started, started: true };
+      }
+      return empty;
     }
 
     let result: HandleResult;

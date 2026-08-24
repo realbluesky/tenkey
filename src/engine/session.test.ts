@@ -44,6 +44,14 @@ describe("TenkeySession", () => {
     expect(session.startedAt).toBe(1500);
   });
 
+  it("starts on a leading decimal for sub-dollar amounts", () => {
+    const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 1 });
+    const started = session.handleKey(key("."), 2000);
+    expect(started.started).toBe(true);
+    expect(session.phase).toBe("entering");
+    expect(session.buffer.map((ch) => ch.ch).join("")).toBe(".");
+  });
+
   it("accepts plus then Tab", () => {
     const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 7 });
     const first = session.current;

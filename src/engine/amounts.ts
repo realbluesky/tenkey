@@ -124,10 +124,9 @@ export function formatCheckAmount(cents: number): string {
 }
 
 export function parseEntry(raw: string): number | null {
-  if (!/^\d+(\.\d{0,2})?$/.test(raw)) return null;
+  if (!/^(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(raw)) return null;
   const [dollarPart, frac] = raw.split(".");
-  if (!dollarPart) return null;
-  const dollars = Number.parseInt(dollarPart, 10);
+  const dollars = dollarPart ? Number.parseInt(dollarPart, 10) : 0;
   if (!Number.isFinite(dollars)) return null;
   if (frac === undefined) return dollars * 100;
   if (frac.length === 0) return dollars * 100;
@@ -141,9 +140,15 @@ export function acceptableStrings(check: CheckItem): string[] {
   if (remainder === 0) {
     return [String(dollars), `${dollars}.`, `${dollars}.0`, `${dollars}.00`];
   }
-  const padded = `${dollars}.${String(remainder).padStart(2, "0")}`;
-  if (remainder % 10 === 0) return [`${dollars}.${remainder / 10}`, padded];
-  return [padded];
+  const two = String(remainder).padStart(2, "0");
+  const forms = [`${dollars}.${two}`];
+  if (dollars === 0) forms.unshift(`.${two}`);
+  if (remainder % 10 === 0) {
+    const tenth = String(remainder / 10);
+    forms.unshift(`${dollars}.${tenth}`);
+    if (dollars === 0) forms.unshift(`.${tenth}`);
+  }
+  return [...new Set(forms)];
 }
 
 export function isAcceptable(check: CheckItem, raw: string): boolean {

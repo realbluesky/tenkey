@@ -107,7 +107,7 @@
 
             <ol class="howto">
               <li>Read the amount in the box on the top check.</li>
-              <li>Enter it on the 10-key. Trailing zeros after the decimal are optional (<code>4</code> for $4.00, <code>73.7</code> for $73.70).</li>
+              <li>Enter it on the 10-key. You may skip trailing zeros after the decimal (<code>4</code> for $4.00, <code>73.7</code> for $73.70) and a leading zero before it (<code>.07</code> for $0.07 — not <code>.7</code>, that is $0.70).</li>
               <li>Press <kbd>+</kbd> to add toward the total, and <kbd>Tab</kbd> to slide — either order.</li>
               <li><kbd>Shift</kbd>+<kbd>Tab</kbd> pulls the last check back if you Tabbed too soon.</li>
               <li>Alpha and stray keys show on the display and must be corrected.</li>
@@ -137,9 +137,9 @@
         <section id="test" class="panel workspace" hidden>
           <div class="stack-area">
             <div class="stack">
-              <div class="paper peek p3"></div>
-              <div class="paper peek p2"></div>
-              <div class="paper peek p1"></div>
+              <div class="paper peek p3" data-peek="3"></div>
+              <div class="paper peek p2" data-peek="2"></div>
+              <div class="paper peek p1" data-peek="1"></div>
               <article class="check is-waiting" id="check-back" aria-hidden="true">
                 <header>
                   <span class="bank">TENKEY NATIONAL BANK</span>
@@ -217,7 +217,7 @@
           </aside>
         </section>
 
-        <section id="results" class="panel" hidden>
+        <section id="results" class="panel results-layout" hidden>
           <div class="result-card">
             <p class="kicker" id="res-mode">Exam · 1 minute</p>
             <div class="result-hero">
@@ -259,6 +259,21 @@
               <button id="home-btn" class="text-btn" type="button">Home</button>
             </div>
           </div>
+          <aside class="machine review-machine" id="review-machine">
+            <div class="tape-house">
+              <div class="tape-slot" aria-hidden="true"></div>
+              <div class="tape-viewport">
+                <div id="review-tape" class="tape"></div>
+              </div>
+              <div class="tape-print" aria-hidden="true"></div>
+            </div>
+            <div class="lcd">
+              <div class="lcd-label">total</div>
+              <div id="review-total" class="lcd-total">$0.00</div>
+              <div class="lcd-label">review</div>
+              <div class="lcd-entry lcd-ghost" id="review-caption">tape</div>
+            </div>
+          </aside>
         </section>
       </main>
     </div>

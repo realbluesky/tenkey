@@ -232,6 +232,32 @@ main {
   padding: 28px 32px 24px;
 }
 
+.results-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(260px, 300px);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.review-machine {
+  position: relative;
+  width: auto;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  min-height: 420px;
+  height: auto;
+}
+
+.review-machine .tape-viewport {
+  overflow: auto;
+}
+
+.review-machine .tape {
+  justify-content: flex-start;
+  min-height: min-content;
+}
+
 .side-card {
   padding: 22px 22px 10px;
 }
@@ -977,7 +1003,8 @@ h1 {
   .live-stats strong {
     font-size: 1.1rem;
   }
-  #setup {
+  #setup,
+  .results-layout {
     grid-template-columns: 1fr;
   }
   .workspace {

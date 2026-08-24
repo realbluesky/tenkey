@@ -510,6 +510,18 @@ class App {
     const next = this.session.checks[this.session.currentIndex + 1];
     this.waiting.hidden = !next;
     if (next) fillCheck(this.waiting, next);
+    this.renderPeeks();
+  }
+
+  private renderPeeks(): void {
+    if (!this.session) return;
+    const remaining =
+      this.session.stackSize == null
+        ? 99
+        : Math.max(0, this.session.stackSize - this.session.currentIndex);
+    document.querySelector<HTMLElement>(".peek.p1")!.hidden = remaining < 3;
+    document.querySelector<HTMLElement>(".peek.p2")!.hidden = remaining < 4;
+    document.querySelector<HTMLElement>(".peek.p3")!.hidden = remaining < 5;
   }
 
   private renderTape(): void {
@@ -677,6 +689,29 @@ class App {
     } else {
       pb.hidden = true;
     }
+    this.renderReviewTape();
+  }
+
+  private renderReviewTape(): void {
+    const session = this.session;
+    if (!session) return;
+    const tape = $("#review-tape");
+    const subs = session.submissions;
+    if (subs.length === 0) {
+      tape.innerHTML = `<div class="tape-line dim"><span>no entries</span><span></span></div>`;
+    } else {
+      tape.innerHTML = subs
+        .map((sub) => {
+          const amount = sub.parsedCents != null ? formatCheckAmount(sub.parsedCents) : sub.raw;
+          const mark = sub.correct ? " ✓" : " ✗";
+          const cls = sub.correct ? "ok" : "bad";
+          return `<div class="tape-line ${cls} is-printed"><span>${amount}</span><span>+${mark}</span></div>`;
+        })
+        .join("");
+    }
+    $("#review-total").textContent = formatMoney(session.snapshot(session.endedAt ?? performance.now()).enteredTotalCents);
+    $("#review-caption").textContent = session.practice ? "practice" : "exam review";
+    tape.scrollTop = tape.scrollHeight;
   }
 
   private pdfSession(): void {
