@@ -237,7 +237,6 @@ main {
   grid-template-columns: minmax(0, 1fr) 280px;
   gap: 20px;
   align-items: stretch;
-  max-width: 960px;
   width: 100%;
   flex: 1 1 auto;
 }
