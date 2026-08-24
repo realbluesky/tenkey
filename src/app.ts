@@ -9,12 +9,15 @@ import {
   kphBand,
   TenkeySession,
 } from "./engine";
+import { buildPace } from "./engine/series";
+import { renderPaceSvg } from "./chart";
 import { VERSION } from "./version";
 import type { CheckItem, KeyInput } from "./engine";
 import { downloadBestsReport, downloadSessionReport, sessionToReport } from "./pdf";
 import {
   bestsByGoal,
   checkIn,
+  groupSessionsByDay,
   loadStore,
   operatorStore,
   personalBest,
@@ -173,30 +176,39 @@ class App {
       })
       .join("");
 
-    const history = $("#history-body");
-    const rows = sessionsFor(this.store).slice(0, 8);
+    const rows = sessionsFor(this.store);
     $("#history-empty").hidden = rows.length > 0;
     $("#history-empty").textContent = who
       ? `No sessions for ${who} yet.`
       : "Check in to see your scores.";
-    const historyTable = document.querySelector<HTMLElement>(".history");
-    if (historyTable) historyTable.hidden = rows.length === 0;
-    history.innerHTML = rows
-      .map((session) => {
-        const dur = goalLabel(session);
-        const when = new Date(session.at).toLocaleString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "numeric",
-          minute: "2-digit",
-        });
-        return `<tr>
-          <td>${when}</td>
-          <td>${session.practice ? "Practice" : "Exam"}</td>
-          <td>${dur}</td>
-          <td>${formatKph(session.score.netKph)}</td>
-          <td>${formatPct(session.score.amountAccuracy)}</td>
-        </tr>`;
+    const days = $("#history-days");
+    days.hidden = rows.length === 0;
+    const today = new Date();
+    days.innerHTML = groupSessionsByDay(rows)
+      .map((group) => {
+        const open = sameDay(group.at, today.getTime()) ? " open" : "";
+        const runs = group.sessions
+          .map((session) => {
+            const when = new Date(session.at).toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+            });
+            return `<tr>
+              <td>${when}</td>
+              <td>${session.practice ? "Practice" : "Exam"}</td>
+              <td>${goalLabel(session)}</td>
+              <td>${formatKph(session.score.netKph)}</td>
+              <td>${formatPct(session.score.amountAccuracy)}</td>
+            </tr>`;
+          })
+          .join("");
+        return `<details${open}>
+          <summary><span>${group.label} · ${group.sessions.length} run${group.sessions.length === 1 ? "" : "s"}</span><strong>median ${formatKph(group.medianKph)} KPH</strong></summary>
+          <table class="history">
+            <thead><tr><th>When</th><th>Mode</th><th>Length</th><th>KPH</th><th>Acc</th></tr></thead>
+            <tbody>${runs}</tbody>
+          </table>
+        </details>`;
       })
       .join("");
   }
@@ -452,6 +464,10 @@ class App {
     this.finishSlideSwap();
     const now = this.session.endedAt ?? performance.now();
     const score = this.session.snapshot(now);
+    const pace =
+      this.session.startedAt != null
+        ? buildPace(this.session.events, this.session.startedAt, now)
+        : [];
     const stored: StoredSession = {
       id: this.session.id,
       at: Date.now(),
@@ -461,6 +477,7 @@ class App {
       seed: this.session.seed,
       practice: this.session.practice,
       score,
+      pace,
     };
     this.store = recordSession(this.store, stored);
     this.lastStored = stored;
@@ -598,6 +615,18 @@ class App {
       ? "Entered total matches the checks you submitted."
       : "Entered total does not match the true total of those checks.";
     $("#res-total-note").classList.toggle("bad", !match);
+    const paceWrap = $("#pace-wrap");
+    const pace = stored.pace ?? [];
+    if (pace.length >= 2) {
+      paceWrap.hidden = false;
+      const kphs = pace.map((p) => p.kph);
+      $("#pace-range").textContent = `${formatKph(Math.min(...kphs))} – ${formatKph(Math.max(...kphs))}`;
+      $("#pace-chart").innerHTML = renderPaceSvg(pace);
+    } else {
+      paceWrap.hidden = true;
+      $("#pace-chart").innerHTML = "";
+      $("#pace-range").textContent = "";
+    }
     const leftover = $("#res-leftover");
     if (score.leftoverRaw) {
       leftover.hidden = false;
@@ -643,6 +672,16 @@ class App {
       this.timer = null;
     }
   }
+}
+
+function sameDay(a: number, b: number): boolean {
+  const da = new Date(a);
+  const db = new Date(b);
+  return (
+    da.getFullYear() === db.getFullYear() &&
+    da.getMonth() === db.getMonth() &&
+    da.getDate() === db.getDate()
+  );
 }
 
 function fillCheck(root: HTMLElement, check: CheckItem): void {

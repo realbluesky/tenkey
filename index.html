@@ -129,18 +129,7 @@
             <ul id="bests-list" class="bests"></ul>
             <h2 id="recent-heading">Recent</h2>
             <p id="history-empty" class="muted">No sessions on this device yet.</p>
-            <table class="history">
-              <thead>
-                <tr>
-                  <th>When</th>
-                  <th>Mode</th>
-                  <th>Time</th>
-                  <th>KPH</th>
-                  <th>Acc</th>
-                </tr>
-              </thead>
-              <tbody id="history-body"></tbody>
-            </table>
+            <div id="history-days" class="history-days"></div>
             <p class="fine">Progress is stored in this browser only.</p>
           </aside>
         </section>
@@ -238,6 +227,13 @@
             </div>
             <p class="band">Band: <em id="res-band">Entry</em></p>
             <p id="res-pb" class="pb" hidden></p>
+            <div class="pace" id="pace-wrap" hidden>
+              <div class="pace-head">
+                <span>Net KPH over the run</span>
+                <span id="pace-range"></span>
+              </div>
+              <div id="pace-chart"></div>
+            </div>
             <dl class="metrics">
               <div><dt>Gross KPH</dt><dd id="res-gross">0</dd></div>
               <div><dt>Numeric KPH</dt><dd id="res-numeric">0</dd></div>

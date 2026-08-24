@@ -1,3 +1,4 @@
+import type { PacePoint } from "./engine/series";
 import type { Score } from "./engine/types";
 
 export const STORAGE_KEY = "tenkey.v1";
@@ -12,6 +13,7 @@ export type StoredSession = {
   seed: number;
   practice: boolean;
   score: Score;
+  pace?: PacePoint[];
 };
 
 export type Store = {
@@ -167,4 +169,57 @@ function uniqueOperators(names: string[]): string[] {
 
 function matchOperator(operators: string[], name: string): string | undefined {
   return operators.find((operator) => sameOperator(operator, name));
+}
+
+export type DayGroup = {
+  key: string;
+  label: string;
+  at: number;
+  sessions: StoredSession[];
+  medianKph: number;
+};
+
+export function groupSessionsByDay(sessions: StoredSession[]): DayGroup[] {
+  const groups = new Map<string, StoredSession[]>();
+  const order: string[] = [];
+  for (const session of sessions) {
+    const key = dayKey(session.at);
+    if (!groups.has(key)) {
+      groups.set(key, []);
+      order.push(key);
+    }
+    groups.get(key)!.push(session);
+  }
+  return order.map((key) => {
+    const list = groups.get(key)!;
+    const kphs = list.map((session) => session.score.netKph).sort((a, b) => a - b);
+    return {
+      key,
+      label: dayLabel(list[0]!.at),
+      at: list[0]!.at,
+      sessions: list,
+      medianKph: median(kphs),
+    };
+  });
+}
+
+export function median(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[mid]!;
+  return (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
+
+function dayKey(at: number): string {
+  const d = new Date(at);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function dayLabel(at: number): string {
+  return new Date(at).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }

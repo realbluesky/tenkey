@@ -364,12 +364,67 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+.pace {
+  margin: 0 0 16px;
+}
+
+.pace-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.pace-svg {
+  display: block;
+}
+
+.pace-line {
+  stroke: var(--blotter);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.pace-fill {
+  fill: rgba(28, 69, 52, 0.12);
+}
+
+.history-days {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.history-days details {
+  border-bottom: 1px dashed #d7ccb6;
+  padding-bottom: 8px;
+}
+
+.history-days summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.88rem;
+  padding: 6px 0;
+}
+
+.history-days summary strong {
+  font-variant-numeric: tabular-nums;
+}
+
 .history {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
-  margin-bottom: 12px;
+  margin: 4px 0 8px;
 }
 
 .history th {

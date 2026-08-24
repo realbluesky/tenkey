@@ -25,7 +25,7 @@ Trailing zeros after the decimal may be omitted (`4` for $4.00, `73.7` for $73.7
 | Corrected accuracy | Also treats backspaces as errors |
 | Uncorrected errors | Wrong submitted amounts only (unfinished next check is not an error) |
 
-Results are stored in **localStorage** on this browser. Name yourself and download a PDF of a session or of exam personal bests.
+Results include a net-KPH sparkline for the run. Recent history is grouped by day with a median KPH. Results are stored in **localStorage** on this browser.
 
 Practice mode marks each add right or wrong. Exam mode hides that until the end; exam sessions are the official bests.
 
