@@ -3,6 +3,7 @@ import { formatMoney } from "./engine/amounts";
 import { formatClock, formatKph, formatPct, kphBand } from "./engine/scoring";
 import type { Score } from "./engine/types";
 import { bestsByDuration, type StoredSession, type Store } from "./storage";
+import { VERSION } from "./version";
 
 const INK = "#1c1916";
 const MUTED = "#5c5348";
@@ -30,8 +31,10 @@ function stampHeader(doc: jsPDF, title: string): number {
   doc.setFontSize(22);
   doc.text("TENKEY", 40, 38);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(214, 196, 150);
+  doc.text(`v${VERSION}`, 572, 38, { align: "right" });
+  doc.setFontSize(10);
   doc.text("NUMERIC ENTRY EXAMINATION", 40, 56);
   doc.setTextColor(247, 241, 228);
   doc.setFontSize(14);
@@ -50,7 +53,7 @@ function footer(doc: jsPDF, page = 1): void {
     40,
     762,
   );
-  doc.text(`Page ${page}`, 572, 762, { align: "right" });
+  doc.text(`v${VERSION}  ·  Page ${page}`, 572, 762, { align: "right" });
 }
 
 function metric(doc: jsPDF, x: number, y: number, label: string, value: string): void {

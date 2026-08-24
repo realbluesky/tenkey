@@ -8,6 +8,7 @@ import {
   kphBand,
   TenkeySession,
 } from "./engine";
+import { VERSION } from "./version";
 import type { CheckItem, KeyInput } from "./engine";
 import { downloadBestsReport, downloadSessionReport, sessionToReport } from "./pdf";
 import {
@@ -69,6 +70,7 @@ class App {
   private pendingLeave: HTMLElement | null = null;
 
   mount(): void {
+    $("#version-stamp").textContent = `v${VERSION}`;
     this.bind();
     this.show("setup");
   }
