@@ -159,7 +159,7 @@ export function downloadSessionReport(report: ReportSession): void {
   doc.setFontSize(9);
   doc.setTextColor(MUTED);
   const note = [
-    `Net KPH is digits, decimal, and + or Enter that remain in submitted amounts. Backspaced keys and an unfinished leftover ${itemNoun(report.source, 1)} do not count. Tab is desk movement and is not counted.`,
+    `Net KPH is digits, decimal, and the desk commit key (+ on calculator, Enter on spreadsheet) that remain in submitted amounts. Backspaced keys and an unfinished leftover ${itemNoun(report.source, 1)} do not count. Tab is desk movement and is not counted.`,
     "Gross KPH includes miskeys, extra keys, and backspaces. Numeric KPH counts surviving 0–9 and decimal keys only.",
     "Trailing zeros after the decimal may be omitted (4 for $4.00, 73.7 for $73.70). A leading zero before the decimal may be omitted (.07 for $0.07; .7 is $0.70).",
     `Accuracy is submitted ${itemNoun(report.source)} that ended up right after any backspaces. Uncorrected errors are wrong submitted amounts only; an unfinished ${itemNoun(report.source, 1)} when time expires is not an error. Corrected accuracy also treats backspaces as errors.`,

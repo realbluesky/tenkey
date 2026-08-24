@@ -3,7 +3,7 @@
 A 10-key (numeric keypad) exam for accuracy and speed, measured in **KPH** (keys per hour). Two jobs share the desk and keep **separate scores**:
 
 - **Checks** — one check at a time. Fonts, sizes, and handwriting vary. `Tab` slides the stack.
-- **Transcription** — a printed list of amounts you can read ahead. `+` or `Enter` adds and moves to the next line.
+- **Transcription** — a printed list of amounts you can read ahead. The desk commit key (`+` on calculator, `Enter` on spreadsheet) adds and moves to the next line.
 
 Live: [realbluesky.github.io/tenkey](https://realbluesky.github.io/tenkey/)
 
@@ -11,7 +11,7 @@ Live: [realbluesky.github.io/tenkey](https://realbluesky.github.io/tenkey/)
 
 1. Pick **Checks** or **Transcription**, then a **stack/list** (10–100, default) or a **timed** run.
 2. Type the amount from the current check, or from the printed list.
-3. On a **calculator** desk, press `+` to add. On a **spreadsheet** desk, press `Enter` to commit the cell and work down the column. In check processing, `Tab` slides the check aside — either order. Calculator and spreadsheet share scores **within** the same job; transcription never mixes with checks.
+3. On a **calculator** desk, press `+` to add (`Enter` does not commit). On a **spreadsheet** desk, press `Enter` to commit the cell and work down the column (`+` does not commit). In check processing, `Tab` slides the check aside — either order with the commit key. Calculator and spreadsheet share scores **within** the same job; transcription never mixes with checks.
 4. `Shift+Tab` brings a check back if you slid too soon.
 5. The clock starts on the **first numeric key**.
 
@@ -22,7 +22,7 @@ Trailing zeros after the decimal may be omitted (`4` for $4.00, `73.7` for $73.7
 | Metric | Meaning |
 | --- | --- |
 | Gross KPH | Keypad work including corrections (not Tab) |
-| Net KPH | Digits, decimal, and +/Enter that remain in submitted amounts. Backspaced keys and an unfinished leftover check do not count. |
+| Net KPH | Digits, decimal, and the desk commit key (`+` on calculator, `Enter` on spreadsheet) that remain in submitted amounts. Backspaced keys and an unfinished leftover check do not count. |
 | Numeric KPH | Surviving digits and decimal only |
 | Accuracy | Submitted checks that ended up right after any backspaces |
 | Corrected accuracy | Also treats backspaces as errors |

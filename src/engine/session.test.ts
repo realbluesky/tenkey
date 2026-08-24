@@ -342,9 +342,27 @@ describe("transcription source", () => {
       desk: "spreadsheet",
     });
     typeAmount(session, canonicalEntry(session.current), 0);
+    const plus = session.handleKey(key("+"), 1);
+    expect(plus.kind).toBe("extra");
+    expect(session.submissions).toHaveLength(0);
     const done = session.handleKey(key("Enter", { code: "Enter" }), 2);
     expect(done.finished).toBe(true);
     expect(session.submissions).toHaveLength(1);
+  });
+
+  it("does not treat Enter as a commit on the calculator desk", () => {
+    const session = new TenkeySession({
+      stackSize: 1,
+      practice: true,
+      seed: 3,
+      source: "transcription",
+    });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    const enter = session.handleKey(key("Enter", { code: "Enter" }), 1);
+    expect(enter.kind).toBe("extra");
+    expect(session.submissions).toHaveLength(0);
+    const plus = session.handleKey(key("+"), 2);
+    expect(plus.finished).toBe(true);
   });
 });
 
