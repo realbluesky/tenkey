@@ -50,7 +50,13 @@ describe("goalKey", () => {
     const tape = { ...session(1, 9000), practice: false, desk: "calculator" as const };
     const sheet = { ...session(2, 11000), practice: false, desk: "spreadsheet" as const };
     expect(goalKey(tape)).toBe(goalKey(sheet));
-    expect(goalKey(tape)).toBe("stack:10");
+    expect(goalKey(tape)).toBe("checks:stack:10");
+  });
+
+  it("splits check processing from transcription", () => {
+    const checks = { ...session(1, 9000), practice: false };
+    const trans = { ...session(2, 11000), practice: false, source: "transcription" as const };
+    expect(goalKey(checks)).not.toBe(goalKey(trans));
   });
 });
 
@@ -67,6 +73,23 @@ describe("bestsByGoal", () => {
     const bests = bestsByGoal(store);
     expect(bests).toHaveLength(1);
     expect(bests[0]!.score.netKph).toBe(11000);
+  });
+
+  it("keeps transcription bests off the check-processing board", () => {
+    const store: Store = {
+      name: "Alex",
+      operators: ["Alex"],
+      sessions: [
+        { ...session(1, 9000), practice: false },
+        { ...session(2, 15000), practice: false, source: "transcription" },
+      ],
+    };
+    const checkBests = bestsByGoal(store, "checks");
+    const transBests = bestsByGoal(store, "transcription");
+    expect(checkBests).toHaveLength(1);
+    expect(checkBests[0]!.score.netKph).toBe(9000);
+    expect(transBests).toHaveLength(1);
+    expect(transBests[0]!.score.netKph).toBe(15000);
   });
 });
 

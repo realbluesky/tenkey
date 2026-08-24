@@ -1,4 +1,5 @@
 export type DeskKind = "calculator" | "spreadsheet";
+export type SourceKind = "checks" | "transcription";
 
 export type Phase =
   | "armed"

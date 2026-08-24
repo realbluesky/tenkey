@@ -8,13 +8,15 @@ import {
   formatMoney,
   formatPct,
   goalLabel,
+  itemNoun,
   kphBand,
+  sourceTitle,
   TenkeySession,
 } from "./engine";
 import { buildPace } from "./engine/series";
 import { renderPaceSvg } from "./chart";
 import { VERSION } from "./version";
-import type { CheckItem, DeskKind, KeyInput } from "./engine";
+import type { CheckItem, DeskKind, KeyInput, SourceKind } from "./engine";
 import { downloadBestsReport, downloadSessionReport, sessionToReport } from "./pdf";
 import {
   bestsByGoal,
@@ -25,7 +27,8 @@ import {
   personalBest,
   recordSession,
   sessionDesk,
-  sessionsFor,
+  sessionSource,
+  sessionsForSource,
   type Store,
   type StoredSession,
 } from "./storage";
@@ -74,6 +77,7 @@ class App {
   private stackSize = 25;
   private durationMs = 60_000;
   private desk: DeskKind = "calculator";
+  private source: SourceKind = "checks";
   private practice = true;
   private session: TenkeySession | null = null;
   private lastStored: StoredSession | null = null;
@@ -117,6 +121,12 @@ class App {
       this.durationMs = Number(btn.dataset.ms);
       this.renderPills();
     });
+    $("#source-pills").addEventListener("click", (event) => {
+      const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-source]");
+      if (!btn) return;
+      this.source = btn.dataset.source === "transcription" ? "transcription" : "checks";
+      this.renderSetup();
+    });
     $("#desk-pills").addEventListener("click", (event) => {
       const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-desk]");
       if (!btn) return;
@@ -138,9 +148,12 @@ class App {
     });
     $("#home-btn").addEventListener("click", () => this.show("setup"));
     $("#pdf-session-btn").addEventListener("click", () => this.pdfSession());
-    $("#pdf-bests-btn").addEventListener("click", () => downloadBestsReport(operatorStore(this.store)));
+    $("#pdf-bests-btn").addEventListener("click", () => {
+      const source = this.session?.source ?? this.source;
+      downloadBestsReport(this.storeForSource(source), source);
+    });
     $("#pdf-bests-setup-btn").addEventListener("click", () =>
-      downloadBestsReport(operatorStore(this.store)),
+      downloadBestsReport(this.storeForSource(this.source), this.source),
     );
 
     document.addEventListener("keydown", (event) => this.onKey(event));
@@ -173,13 +186,16 @@ class App {
     this.renderCheckin();
     this.renderPills();
     const who = this.store.name.trim();
-    $("#bests-heading").textContent = who ? `${who} · exam bests` : "Personal bests (exam)";
+    const job = sourceTitle(this.source);
+    $("#bests-heading").textContent = who
+      ? `${who} · ${job} · exam bests`
+      : `${job} · exam bests`;
     $("#recent-heading").textContent = who ? `${who} · recent` : "Recent";
-    const bests = bestsByGoal(this.store);
+    const bests = bestsByGoal(this.store, this.source);
     $("#bests-empty").hidden = bests.length > 0;
     $("#bests-empty").textContent = who
-      ? `No exam sessions for ${who} yet.`
-      : "No exam sessions on this station yet.";
+      ? `No ${job.toLowerCase()} exam sessions for ${who} yet.`
+      : `No ${job.toLowerCase()} exam sessions on this station yet.`;
     const list = $("#bests-list");
     list.innerHTML = bests
       .map((session) => {
@@ -187,7 +203,7 @@ class App {
       })
       .join("");
 
-    const rows = sessionsFor(this.store);
+    const rows = sessionsForSource(this.store, this.source);
     $("#history-empty").hidden = rows.length > 0;
     $("#history-empty").textContent = who
       ? `No sessions for ${who} yet.`
@@ -310,6 +326,9 @@ class App {
     for (const btn of document.querySelectorAll<HTMLElement>("#duration-pills [data-ms]")) {
       btn.classList.toggle("is-on", Number(btn.dataset.ms) === this.durationMs);
     }
+    for (const btn of document.querySelectorAll<HTMLElement>("#source-pills [data-source]")) {
+      btn.classList.toggle("is-on", btn.dataset.source === this.source);
+    }
     for (const btn of document.querySelectorAll<HTMLElement>("#desk-pills [data-desk]")) {
       btn.classList.toggle("is-on", btn.dataset.desk === this.desk);
     }
@@ -319,21 +338,61 @@ class App {
     }
     $("#stack-field").hidden = this.lengthKind !== "stack";
     $("#duration-field").hidden = this.lengthKind !== "time";
+    $("#source-checks-note").hidden = this.source !== "checks";
+    $("#source-trans-note").hidden = this.source !== "transcription";
     $("#desk-calc-note").hidden = this.desk !== "calculator";
     $("#desk-sheet-note").hidden = this.desk !== "spreadsheet";
     $("#mode-practice-note").hidden = !this.practice;
     $("#mode-exam-note").hidden = this.practice;
-    this.renderDeskCopy();
+    this.renderTicketCopy();
   }
 
-  private renderDeskCopy(): void {
+  private renderTicketCopy(): void {
     const sheet = this.desk === "spreadsheet";
-    $("#lede").innerHTML = sheet
-      ? `Type each amount. <kbd>Enter</kbd> commits the cell and you work down the column. <kbd>Tab</kbd> slides the check — either order. <kbd>Shift</kbd>+<kbd>Tab</kbd> brings a premature slide back. The clock starts on your first digit. Speed is Keystrokes per Hour (KPH).`
-      : `Type each amount. <kbd>+</kbd> and <kbd>Tab</kbd> can happen in either order — add, then slide, or start sliding before you hit add. <kbd>Shift</kbd>+<kbd>Tab</kbd> brings a premature slide back. The clock starts on your first digit. Speed is Keystrokes per Hour (KPH).`;
-    $("#howto-commit").innerHTML = sheet
-      ? `Press <kbd>Enter</kbd> to commit the cell, and <kbd>Tab</kbd> to slide — either order.`
-      : `Press <kbd>+</kbd> to add toward the total, and <kbd>Tab</kbd> to slide — either order.`;
+    const trans = this.source === "transcription";
+    const commit = sheet ? "Enter" : "+";
+    this.applyChrome(this.source);
+    $("#kicker").textContent = trans
+      ? "Station 4 · Transcription"
+      : "Station 4 · Check processing";
+    $("#headline").textContent = trans
+      ? "Read the list. Key the amounts."
+      : "Add the stack. Slide the check.";
+    $("#length-stack-btn").textContent = trans ? "List" : "Stack";
+    $("#stack-heading").textContent = trans ? "List size" : "Stack size";
+    $("#stack-note").textContent = trans
+      ? "Work through the whole list. The clock is only for KPH."
+      : "Work through the whole stack. The clock is only for KPH.";
+    $("#duration-note").textContent = trans
+      ? "Keep going down the list until time runs out."
+      : "Infinite stack until time runs out.";
+    $("#desk-sheet-note").innerHTML = trans
+      ? `<kbd>Enter</kbd> commits the cell and you work down the column.`
+      : `<kbd>Enter</kbd> commits the cell and you work down the column. Tab still slides the check.`;
+    $("#howto-checks").hidden = trans;
+    $("#howto-transcription").hidden = !trans;
+    if (trans) {
+      $("#lede").innerHTML = `The full list is in front of you. Type each amount and press <kbd>${commit}</kbd> to add — you can read ahead. The clock starts on your first digit. Speed is Keystrokes per Hour (KPH). Scores are separate from check processing.`;
+      $("#howto-trans-commit").innerHTML = sheet
+        ? `Press <kbd>Enter</kbd> to commit the cell and move to the next line.`
+        : `Press <kbd>+</kbd> to add and move to the next line.`;
+    } else if (sheet) {
+      $("#lede").innerHTML = `Type each amount. <kbd>Enter</kbd> commits the cell and you work down the column. <kbd>Tab</kbd> slides the check — either order. <kbd>Shift</kbd>+<kbd>Tab</kbd> brings a premature slide back. The clock starts on your first digit. Speed is Keystrokes per Hour (KPH).`;
+      $("#howto-commit").innerHTML = `Press <kbd>Enter</kbd> to commit the cell, and <kbd>Tab</kbd> to slide — either order.`;
+    } else {
+      $("#lede").innerHTML = `Type each amount. <kbd>+</kbd> and <kbd>Tab</kbd> can happen in either order — add, then slide, or start sliding before you hit add. <kbd>Shift</kbd>+<kbd>Tab</kbd> brings a premature slide back. The clock starts on your first digit. Speed is Keystrokes per Hour (KPH).`;
+      $("#howto-commit").innerHTML = `Press <kbd>+</kbd> to add toward the total, and <kbd>Tab</kbd> to slide — either order.`;
+    }
+  }
+
+  private applyChrome(source: SourceKind): void {
+    $("#brand-tagline").textContent = source === "transcription" ? "transcription" : "check totals";
+    document.title = source === "transcription" ? "TENKEY — transcription" : "TENKEY — check totals";
+  }
+
+  private storeForSource(source: SourceKind): ReturnType<typeof operatorStore> {
+    const scoped = operatorStore(this.store);
+    return { ...scoped, sessions: sessionsForSource(scoped, source) };
   }
 
   private start(seed?: number): void {
@@ -351,6 +410,7 @@ class App {
       stackSize: this.lengthKind === "stack" ? this.stackSize : null,
       practice: this.practice,
       desk: this.desk,
+      source: this.source,
       seed,
     });
     this.applyDeskUi($("#live-machine"), this.desk);
@@ -414,13 +474,15 @@ class App {
       this.complete();
       return;
     }
-    if (result.unslid) this.playUnslide();
+    if (this.session.source === "transcription") {
+      this.renderReadoff();
+    } else if (result.unslid) this.playUnslide();
     else if (result.slid) this.playSlide(result.recycle);
     else if (result.recycle) this.finishSlideSwap();
     this.renderOutput();
     this.renderEntry();
     this.renderHint();
-    this.renderPeeks();
+    if (this.session.source === "checks") this.renderPeeks();
     this.renderLive(now);
   }
 
@@ -510,6 +572,7 @@ class App {
       seed: this.session.seed,
       practice: this.session.practice,
       desk: this.session.desk,
+      source: this.session.source,
       score,
       pace,
     };
@@ -520,8 +583,11 @@ class App {
 
   private renderTest(updateCheck: boolean): void {
     if (!this.session) return;
+    $("#test").dataset.source = this.session.source;
+    this.applyChrome(this.session.source);
     this.applyDeskUi($("#live-machine"), this.session.desk);
-    if (updateCheck) this.renderChecks();
+    if (this.session.source === "transcription") this.renderReadoff();
+    else if (updateCheck) this.renderChecks();
     this.renderOutput();
     this.renderEntry();
     this.renderHint();
@@ -577,6 +643,33 @@ class App {
     document.querySelector<HTMLElement>(".peek.p1")!.hidden = remaining < 2;
     document.querySelector<HTMLElement>(".peek.p2")!.hidden = remaining < 3;
     document.querySelector<HTMLElement>(".peek.p3")!.hidden = remaining < 4;
+  }
+
+  private renderReadoff(): void {
+    if (!this.session) return;
+    const session = this.session;
+    const list = $("#readoff-list");
+    const current = session.currentIndex;
+    list.innerHTML = session.checks
+      .map((item, i) => {
+        const amount = formatMoney(item.cents);
+        const sub = session.submissions[i];
+        const classes: string[] = [];
+        if (i === current && session.phase !== "done" && session.phase !== "aborted") {
+          classes.push("is-current");
+        } else if (sub) {
+          classes.push("is-done");
+          if (session.practice) classes.push(sub.correct ? "ok" : "bad");
+        }
+        return `<li class="${classes.join(" ")}"><span class="n">${i + 1}</span><span class="amt">${amount}</span></li>`;
+      })
+      .join("");
+    const total = session.stackSize ?? session.checks.length;
+    $("#readoff-meta").textContent =
+      session.stackSize != null
+        ? `${total} ${itemNoun("transcription", total)}`
+        : "open list";
+    list.querySelector(".is-current")?.scrollIntoView({ block: "nearest" });
   }
 
   private renderTape(): void {
@@ -668,14 +761,26 @@ class App {
     if (!this.session) return;
     const hint = $("#hint");
     const commit = this.session.desk === "spreadsheet" ? "Enter" : "+";
+    const trans = this.session.source === "transcription";
+    const unit = trans ? "amount" : "check";
     const last =
       this.session.stackSize != null &&
       this.session.hasCurrentCheck &&
       this.session.currentIndex === this.session.stackSize - 1;
     if (this.session.phase === "armed") {
       hint.textContent = last
-        ? "Last check. First digit starts."
+        ? `Last ${unit}. First digit starts.`
         : "First digit starts the clock.";
+    } else if (trans) {
+      if (this.session.buffer.some((ch) => ch.miskey)) {
+        hint.textContent = `Backspace the red keys, then ${commit}.`;
+      } else if (last) {
+        hint.textContent = `${commit} to add the last amount and finish.`;
+      } else if (this.session.buffer.length === 0) {
+        hint.textContent = `Type the amount, then ${commit}.`;
+      } else {
+        hint.textContent = `${commit} to add and go to the next line.`;
+      }
     } else if (this.session.phase === "awaiting_slide") {
       hint.textContent = last ? "Tab — last check, then you're done." : "Tab — slide this check aside.";
     } else if (this.session.phase === "awaiting_plus") {
@@ -700,6 +805,8 @@ class App {
     const elapsed = this.session.elapsedMs(now);
     const stack = this.session.stackSize;
     $("#stat-progress-wrap").hidden = stack == null;
+    $("#stat-progress-label").textContent =
+      this.session.source === "transcription" ? "list" : "stack";
     if (stack != null) {
       $("#stat-progress").textContent = `${this.session.clearedCount}/${stack}`;
       $("#stat-time-label").textContent = "elapsed";
@@ -724,7 +831,13 @@ class App {
     $("#res-kph").textContent = formatKph(score.netKph);
     $("#res-acc").textContent = formatPct(score.amountAccuracy);
     $("#res-band").textContent = kphBand(score.netKph);
-    $("#res-mode").textContent = `${stored.practice ? "Practice" : "Exam"} · ${goalLabel(stored)} · ${deskTitle(sessionDesk(stored))}`;
+    const source = sessionSource(stored);
+    this.applyChrome(source);
+    $("#res-mode").textContent = `${sourceTitle(source)} · ${stored.practice ? "Practice" : "Exam"} · ${goalLabel(stored)} · ${deskTitle(sessionDesk(stored))}`;
+    $("#res-items-label").textContent =
+      source === "transcription" ? "Amounts correct" : "Checks correct";
+    $("#retry-seed-btn").textContent =
+      source === "transcription" ? "Same amounts" : "Same checks";
     $("#res-gross").textContent = formatKph(score.grossKph);
     $("#res-numeric").textContent = formatKph(score.numericKph);
     $("#res-corr-acc").textContent = formatPct(score.correctedAccuracy);
@@ -734,9 +847,10 @@ class App {
     $("#res-entered").textContent = formatMoney(score.enteredTotalCents);
     $("#res-true").textContent = formatMoney(score.trueTotalCents);
     const match = score.enteredTotalCents === score.trueTotalCents;
+    const items = itemNoun(source);
     $("#res-total-note").textContent = match
-      ? "Entered total matches the checks you submitted."
-      : "Entered total does not match the true total of those checks.";
+      ? `Entered total matches the ${items} you submitted.`
+      : `Entered total does not match the true total of those ${items}.`;
     $("#res-total-note").classList.toggle("bad", !match);
     const paceWrap = $("#pace-wrap");
     const pace = stored.pace ?? [];
@@ -753,7 +867,7 @@ class App {
     const leftover = $("#res-leftover");
     if (score.leftoverRaw) {
       leftover.hidden = false;
-      leftover.textContent = `Unfinished next check when time expired (${score.leftoverRaw}) — not counted as an error.`;
+      leftover.textContent = `Unfinished next ${itemNoun(source, 1)} when time expired (${score.leftoverRaw}) — not counted as an error.`;
     } else {
       leftover.hidden = true;
       leftover.textContent = "";
@@ -764,6 +878,7 @@ class App {
       stored.durationMs,
       stored.practice,
       stored.stackSize ?? null,
+      source,
     );
     const pb = $("#res-pb");
     if (best && best.id !== stored.id && best.score.netKph > 0) {

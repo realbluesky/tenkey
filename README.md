@@ -1,14 +1,17 @@
 # TENKEY
 
-A 10-key (numeric keypad) exam for **check totals**: accuracy and speed, measured in **KPH** (keys per hour).
+A 10-key (numeric keypad) exam for accuracy and speed, measured in **KPH** (keys per hour). Two jobs share the desk and keep **separate scores**:
+
+- **Checks** — one check at a time. Fonts, sizes, and handwriting vary. `Tab` slides the stack.
+- **Transcription** — a printed list of amounts you can read ahead. `+` or `Enter` adds and moves to the next line.
 
 Live: [realbluesky.github.io/tenkey](https://realbluesky.github.io/tenkey/)
 
 ## How it works
 
-1. Pick a **stack** (10–100 checks, default) or a **timed** run. A stack ends when you finish the last check; timed runs keep an endless stack until the clock hits zero.
-2. Type the amount from the top check.
-3. On a **calculator** desk, press `+` to add it toward the running total. On a **spreadsheet** desk, press `Enter` to commit the cell and work down the column. `Tab` slides the check aside — either order. Calculator and spreadsheet share the same scores.
+1. Pick **Checks** or **Transcription**, then a **stack/list** (10–100, default) or a **timed** run.
+2. Type the amount from the current check, or from the printed list.
+3. On a **calculator** desk, press `+` to add. On a **spreadsheet** desk, press `Enter` to commit the cell and work down the column. In check processing, `Tab` slides the check aside — either order. Calculator and spreadsheet share scores **within** the same job; transcription never mixes with checks.
 4. `Shift+Tab` brings a check back if you slid too soon.
 5. The clock starts on the **first numeric key**.
 

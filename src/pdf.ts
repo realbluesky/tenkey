@@ -1,8 +1,18 @@
 import { jsPDF } from "jspdf";
 import { formatMoney } from "./engine/amounts";
-import { deskNoun, deskTitle, formatClock, formatKph, formatPct, goalLabel, kphBand } from "./engine/scoring";
-import { bestsByGoal, sessionDesk, type StoredSession, type Store } from "./storage";
-import type { DeskKind, Score } from "./engine/types";
+import {
+  deskNoun,
+  deskTitle,
+  formatClock,
+  formatKph,
+  formatPct,
+  goalLabel,
+  itemNoun,
+  kphBand,
+  sourceTitle,
+} from "./engine/scoring";
+import { bestsByGoal, sessionDesk, sessionSource, type StoredSession, type Store } from "./storage";
+import type { DeskKind, Score, SourceKind } from "./engine/types";
 import { VERSION } from "./version";
 
 const INK = "#1c1916";
@@ -18,6 +28,7 @@ export type ReportSession = {
   stackSize: number | null;
   practice: boolean;
   desk?: DeskKind;
+  source?: SourceKind;
   score: Score;
   sessionId: string;
   seed: number;
@@ -73,7 +84,7 @@ export function downloadSessionReport(report: ReportSession): void {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   doc.setFillColor(PAPER);
   doc.rect(0, 0, 612, 792, "F");
-  let y = stampHeader(doc, "Check Totals Report");
+  let y = stampHeader(doc, `${sourceTitle(report.source)} Report`);
 
   const operator = report.name.trim() || "Anonymous";
   const when = new Date(report.at).toLocaleString("en-US", {
@@ -93,7 +104,7 @@ export function downloadSessionReport(report: ReportSession): void {
     y,
   );
   doc.text(
-    `Mode  Check Totals · ${deskTitle(report.desk)} · ${report.practice ? "Practice" : "Exam"}`,
+    `Mode  ${sourceTitle(report.source)} · ${deskTitle(report.desk)} · ${report.practice ? "Practice" : "Exam"}`,
     320,
     y,
   );
@@ -123,7 +134,12 @@ export function downloadSessionReport(report: ReportSession): void {
     ["Keystrokes", String(report.score.keystrokes)],
     ["Corrected errors (backspaces)", String(report.score.correctedErrors)],
     ["Uncorrected errors", String(report.score.uncorrectedErrors)],
-    ["Checks correct / submitted", `${report.score.checksCorrect} / ${report.score.checksSubmitted}`],
+    [
+      report.source === "transcription"
+        ? "Amounts correct / submitted"
+        : "Checks correct / submitted",
+      `${report.score.checksCorrect} / ${report.score.checksSubmitted}`,
+    ],
     ["Entered total", formatMoney(report.score.enteredTotalCents)],
     ["True total of submitted checks", formatMoney(report.score.trueTotalCents)],
     ["Session ID", report.sessionId],
@@ -143,10 +159,10 @@ export function downloadSessionReport(report: ReportSession): void {
   doc.setFontSize(9);
   doc.setTextColor(MUTED);
   const note = [
-    "Net KPH is digits, decimal, and + or Enter that remain in submitted amounts. Backspaced keys and an unfinished leftover check do not count. Tab is desk movement and is not counted.",
+    `Net KPH is digits, decimal, and + or Enter that remain in submitted amounts. Backspaced keys and an unfinished leftover ${itemNoun(report.source, 1)} do not count. Tab is desk movement and is not counted.`,
     "Gross KPH includes miskeys, extra keys, and backspaces. Numeric KPH counts surviving 0–9 and decimal keys only.",
     "Trailing zeros after the decimal may be omitted (4 for $4.00, 73.7 for $73.70). A leading zero before the decimal may be omitted (.07 for $0.07; .7 is $0.70).",
-    "Accuracy is submitted checks that ended up right after any backspaces. Uncorrected errors are wrong submitted amounts only; an unfinished check when time expires is not an error. Corrected accuracy also treats backspaces as errors.",
+    `Accuracy is submitted ${itemNoun(report.source)} that ended up right after any backspaces. Uncorrected errors are wrong submitted amounts only; an unfinished ${itemNoun(report.source, 1)} when time expires is not an error. Corrected accuracy also treats backspaces as errors.`,
   ].join(" ");
   const wrapped = doc.splitTextToSize(note, 532);
   doc.text(wrapped, 40, y);
@@ -156,11 +172,12 @@ export function downloadSessionReport(report: ReportSession): void {
   doc.save(`tenkey-${slug}-${stamp(report.at)}.pdf`);
 }
 
-export function downloadBestsReport(store: Store): void {
+export function downloadBestsReport(store: Store, source?: SourceKind): void {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   doc.setFillColor(PAPER);
   doc.rect(0, 0, 612, 792, "F");
-  let y = stampHeader(doc, "Official Best Results");
+  const job = source ?? (store.sessions[0] ? sessionSource(store.sessions[0]) : "checks");
+  let y = stampHeader(doc, `Official Best Results · ${sourceTitle(job)}`);
 
   const operator = store.name.trim() || "Anonymous";
   doc.setFont("helvetica", "normal");
@@ -170,7 +187,7 @@ export function downloadBestsReport(store: Store): void {
   doc.text(`Prepared  ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`, 320, y);
   y += 28;
 
-  const bests = bestsByGoal(store);
+  const bests = bestsByGoal(store, job);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(GREEN);
@@ -274,6 +291,7 @@ export function sessionToReport(
     stackSize: session.stackSize ?? null,
     practice: session.practice,
     desk: sessionDesk(session),
+    source: sessionSource(session),
     score: session.score,
     sessionId: session.id,
     seed: session.seed,

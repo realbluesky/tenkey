@@ -226,9 +226,24 @@ export function deskTitle(desk?: string | null): string {
   return desk === "spreadsheet" ? "Spreadsheet" : "Calculator";
 }
 
-export function goalLabel(session: { stackSize?: number | null; durationMs: number }): string {
+export function sourceTitle(source?: string | null): string {
+  return source === "transcription" ? "Transcription" : "Check totals";
+}
+
+export function itemNoun(source?: string | null, count = 2): string {
+  const many = count !== 1;
+  if (source === "transcription") return many ? "amounts" : "amount";
+  return many ? "checks" : "check";
+}
+
+export function goalLabel(session: {
+  stackSize?: number | null;
+  durationMs: number;
+  source?: string | null;
+}): string {
   if (session.stackSize && session.stackSize > 0) {
-    return session.stackSize === 1 ? "1 check" : `${session.stackSize} checks`;
+    const n = session.stackSize;
+    return n === 1 ? `1 ${itemNoun(session.source, 1)}` : `${n} ${itemNoun(session.source, n)}`;
   }
   return formatDuration(session.durationMs);
 }

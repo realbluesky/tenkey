@@ -26,6 +26,8 @@ export {
   goalLabel,
   deskNoun,
   deskTitle,
+  sourceTitle,
+  itemNoun,
   kphBand,
   levenshtein,
 } from "./scoring";
@@ -37,5 +39,6 @@ export type {
   KeyInput,
   Phase,
   Score,
+  SourceKind,
   Submission,
 } from "./types";

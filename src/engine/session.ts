@@ -11,6 +11,7 @@ import type {
   Keystroke,
   Phase,
   Score,
+  SourceKind,
   Submission,
 } from "./types";
 
@@ -65,6 +66,7 @@ export class TenkeySession {
   readonly seed: number;
   readonly practice: boolean;
   readonly desk: DeskKind;
+  readonly source: SourceKind;
   readonly id: string;
   phase: Phase = "armed";
   startedAt: number | null = null;
@@ -87,6 +89,7 @@ export class TenkeySession {
     seed?: number;
     practice: boolean;
     desk?: DeskKind;
+    source?: SourceKind;
     id?: string;
   }) {
     this.stackSize = opts.stackSize ?? null;
@@ -94,10 +97,11 @@ export class TenkeySession {
     this.seed = opts.seed ?? (Math.floor(Math.random() * 0xffffffff) >>> 0);
     this.practice = opts.practice;
     this.desk = opts.desk ?? "calculator";
+    this.source = opts.source ?? "checks";
     this.id = opts.id ?? createId();
     this.rng = mulberry32(this.seed);
     this.startNumber = 1000 + Math.floor(this.rng() * 8000);
-    this.checks.push(generateCheck(this.rng, 0, this.startNumber));
+    this.checks.push(this.makeItem(0));
     this.ensureLookahead();
   }
 
@@ -207,14 +211,18 @@ export class TenkeySession {
       if (isDecimalKey(input)) {
         this.startedAt = now;
         this.phase = "entering";
-        const started = this.handleEntering(input, now);
+        const started =
+          this.source === "transcription"
+            ? this.handleTranscription(input, now)
+            : this.handleEntering(input, now);
         return { ...started, started: true };
       }
       return empty;
     }
 
     let result: HandleResult;
-    if (this.phase === "entering") result = this.handleEntering(input, now);
+    if (this.source === "transcription") result = this.handleTranscription(input, now);
+    else if (this.phase === "entering") result = this.handleEntering(input, now);
     else if (this.phase === "awaiting_plus") result = this.handleAwaitingPlus(input, now);
     else result = this.handleAwaitingSlide(input, now);
     if (this.isStackComplete()) {
@@ -222,6 +230,48 @@ export class TenkeySession {
       return { ...result, finished: true };
     }
     return result;
+  }
+
+  private handleTranscription(input: KeyInput, now: number): HandleResult {
+    if (isSlideKey(input) || isUnslideKey(input)) {
+      this.record(input, now, "ignored");
+      return this.result("ignored");
+    }
+    if (isCommitKey(input, this.desk)) {
+      return this.submitTranscription(input, now);
+    }
+    if (isPlusKey(input) || isEnterKey(input)) {
+      this.record(input, now, "extra");
+      return this.result("extra");
+    }
+    return this.handleBuffer(input, now);
+  }
+
+  private submitTranscription(input: KeyInput, now: number): HandleResult {
+    const raw = this.buffer.map((ch) => ch.ch).join("");
+    if (raw.length === 0) {
+      this.record(input, now, "extra");
+      return this.result("extra");
+    }
+    const check = this.entryCheck;
+    const parsedCents = parseEntry(raw);
+    const correct = isAcceptable(check, raw);
+    const submission: Submission = {
+      check,
+      raw,
+      parsedCents,
+      correct,
+      atMs: now,
+    };
+    this.submissions.push(submission);
+    this.lastSubmitted = submission;
+    this.buffer = [];
+    this.currentIndex += 1;
+    this.entryIndex = this.currentIndex;
+    this.ensureLookahead();
+    this.phase = "entering";
+    this.record(input, now, "plus");
+    return this.result("plus", { submitted: submission, recycle: true });
   }
 
   private handleEntering(input: KeyInput, now: number): HandleResult {
@@ -389,11 +439,23 @@ export class TenkeySession {
     };
   }
 
+  private makeItem(index: number): CheckItem {
+    const item = generateCheck(this.rng, index, this.startNumber);
+    if (this.source === "transcription") {
+      item.amountHand = "print-mono";
+      item.amountSize = "md";
+      item.amountTilt = 0;
+    }
+    return item;
+  }
+
   private ensureLookahead(): void {
-    while (this.checks.length < this.currentIndex + 4) {
+    const ahead = this.source === "transcription" ? 40 : 4;
+    const want = this.stackSize != null ? this.stackSize : this.currentIndex + ahead;
+    while (this.checks.length < want) {
       if (this.stackSize != null && this.checks.length >= this.stackSize) return;
       const index = this.checks.length;
-      this.checks.push(generateCheck(this.rng, index, this.startNumber));
+      this.checks.push(this.makeItem(index));
     }
   }
 }

@@ -1,5 +1,5 @@
 import type { PacePoint } from "./engine/series";
-import type { DeskKind, Score } from "./engine/types";
+import type { DeskKind, Score, SourceKind } from "./engine/types";
 
 export const STORAGE_KEY = "tenkey.v1";
 const MAX_SESSIONS_PER_OPERATOR = 80;
@@ -13,12 +13,17 @@ export type StoredSession = {
   seed: number;
   practice: boolean;
   desk?: DeskKind;
+  source?: SourceKind;
   score: Score;
   pace?: PacePoint[];
 };
 
 export function sessionDesk(session: { desk?: DeskKind | null }): DeskKind {
   return session.desk === "spreadsheet" ? "spreadsheet" : "calculator";
+}
+
+export function sessionSource(session: { source?: SourceKind | null }): SourceKind {
+  return session.source === "transcription" ? "transcription" : "checks";
 }
 
 export type Store = {
@@ -102,14 +107,16 @@ export function operatorStore(store: Store): Store {
 }
 
 export function goalKey(session: StoredSession): string {
-  if (session.stackSize) return `stack:${session.stackSize}`;
-  return `time:${session.durationMs}`;
+  const source = sessionSource(session);
+  if (session.stackSize) return `${source}:stack:${session.stackSize}`;
+  return `${source}:time:${session.durationMs}`;
 }
 
-export function bestsByGoal(store: Store): StoredSession[] {
+export function bestsByGoal(store: Store, source?: SourceKind): StoredSession[] {
   const map = new Map<string, StoredSession>();
   for (const session of sessionsFor(store)) {
     if (session.practice) continue;
+    if (source && sessionSource(session) !== source) continue;
     const key = goalKey(session);
     const prev = map.get(key);
     if (!prev || better(session, prev)) map.set(key, session);
@@ -146,16 +153,26 @@ export function personalBest(
   durationMs: number,
   practice: boolean,
   stackSize: number | null = null,
+  source: SourceKind = "checks",
 ): StoredSession | null {
   let best: StoredSession | null = null;
   for (const session of sessionsFor(store)) {
     if (session.practice !== practice) continue;
+    if (sessionSource(session) !== source) continue;
     const sessionStack = session.stackSize ?? null;
     if ((stackSize ?? null) !== sessionStack) continue;
     if (!stackSize && session.durationMs !== durationMs) continue;
     if (!best || better(session, best)) best = session;
   }
   return best;
+}
+
+export function sessionsForSource(
+  store: Store,
+  source: SourceKind,
+  name = store.name,
+): StoredSession[] {
+  return sessionsFor(store, name).filter((session) => sessionSource(session) === source);
 }
 
 function uniqueOperators(names: string[]): string[] {

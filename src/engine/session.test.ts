@@ -284,6 +284,70 @@ describe("spreadsheet desk", () => {
   });
 });
 
+describe("transcription source", () => {
+  it("commits and advances on plus without Tab", () => {
+    const session = new TenkeySession({
+      stackSize: 2,
+      practice: true,
+      seed: 9,
+      source: "transcription",
+    });
+    expect(session.checks.length).toBe(2);
+    expect(session.current.amountHand).toBe("print-mono");
+    typeAmount(session, canonicalEntry(session.current), 0);
+    const plus = session.handleKey(key("+"), 10);
+    expect(plus.submitted?.correct).toBe(true);
+    expect(session.currentIndex).toBe(1);
+    expect(session.entryIndex).toBe(1);
+    expect(session.phase).toBe("entering");
+    expect(session.phase).not.toBe("awaiting_slide");
+  });
+
+  it("ignores Tab instead of sliding", () => {
+    const session = new TenkeySession({
+      stackSize: 2,
+      practice: true,
+      seed: 9,
+      source: "transcription",
+    });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    const slid = session.handleKey(tab(), 10);
+    expect(slid.kind).toBe("ignored");
+    expect(session.currentIndex).toBe(0);
+    expect(session.submissions).toHaveLength(0);
+    const plus = session.handleKey(key("+"), 11);
+    expect(plus.submitted?.correct).toBe(true);
+  });
+
+  it("finishes a list on the last plus", () => {
+    const session = new TenkeySession({
+      stackSize: 1,
+      practice: true,
+      seed: 3,
+      source: "transcription",
+    });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    const done = session.handleKey(key("+"), 2);
+    expect(done.finished).toBe(true);
+    expect(session.phase).toBe("done");
+    expect(session.submissions).toHaveLength(1);
+  });
+
+  it("commits with Enter on the spreadsheet desk", () => {
+    const session = new TenkeySession({
+      stackSize: 1,
+      practice: true,
+      seed: 3,
+      source: "transcription",
+      desk: "spreadsheet",
+    });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    const done = session.handleKey(key("Enter", { code: "Enter" }), 2);
+    expect(done.finished).toBe(true);
+    expect(session.submissions).toHaveLength(1);
+  });
+});
+
 describe("formatMoney", () => {
   it("groups thousands", () => {
     expect(formatMoney(128450)).toBe("$1,284.50");
