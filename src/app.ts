@@ -390,6 +390,7 @@ class App {
     this.renderTape();
     this.renderEntry();
     this.renderHint();
+    this.renderPeeks();
     this.renderLive(now);
   }
 
@@ -519,9 +520,9 @@ class App {
       this.session.stackSize == null
         ? 99
         : Math.max(0, this.session.stackSize - this.session.currentIndex);
-    document.querySelector<HTMLElement>(".peek.p1")!.hidden = remaining < 3;
-    document.querySelector<HTMLElement>(".peek.p2")!.hidden = remaining < 4;
-    document.querySelector<HTMLElement>(".peek.p3")!.hidden = remaining < 5;
+    document.querySelector<HTMLElement>(".peek.p1")!.hidden = remaining < 2;
+    document.querySelector<HTMLElement>(".peek.p2")!.hidden = remaining < 3;
+    document.querySelector<HTMLElement>(".peek.p3")!.hidden = remaining < 4;
   }
 
   private renderTape(): void {
