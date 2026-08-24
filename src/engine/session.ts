@@ -52,6 +52,7 @@ function isPrintable(input: KeyInput): boolean {
 
 export class TenkeySession {
   readonly durationMs: number;
+  readonly stackSize: number | null;
   readonly seed: number;
   readonly practice: boolean;
   readonly id: string;
@@ -71,12 +72,14 @@ export class TenkeySession {
   private startNumber: number;
 
   constructor(opts: {
-    durationMs: number;
+    durationMs?: number;
+    stackSize?: number | null;
     seed?: number;
     practice: boolean;
     id?: string;
   }) {
-    this.durationMs = opts.durationMs;
+    this.stackSize = opts.stackSize ?? null;
+    this.durationMs = this.stackSize ? 0 : (opts.durationMs ?? 60_000);
     this.seed = opts.seed ?? (Math.floor(Math.random() * 0xffffffff) >>> 0);
     this.practice = opts.practice;
     this.id = opts.id ?? createId();
@@ -95,9 +98,32 @@ export class TenkeySession {
   }
 
   remainingMs(now: number): number {
+    if (this.durationMs <= 0) return 0;
     if (this.phase === "done") return 0;
     if (this.phase === "aborted" || this.startedAt == null) return this.durationMs;
     return Math.max(0, this.durationMs - (now - this.startedAt));
+  }
+
+  elapsedMs(now: number): number {
+    if (this.startedAt == null) return 0;
+    const ended = this.endedAt ?? now;
+    return Math.max(0, ended - this.startedAt);
+  }
+
+  get clearedCount(): number {
+    return Math.min(this.submissions.length, this.currentIndex);
+  }
+
+  get hasCurrentCheck(): boolean {
+    return this.stackSize == null || this.currentIndex < this.stackSize;
+  }
+
+  isStackComplete(): boolean {
+    return (
+      this.stackSize != null &&
+      this.submissions.length >= this.stackSize &&
+      this.currentIndex >= this.stackSize
+    );
   }
 
   snapshot(now: number): Score {
@@ -117,7 +143,11 @@ export class TenkeySession {
 
   tick(now: number): boolean {
     if (this.phase === "done" || this.phase === "aborted") return false;
-    if (this.startedAt != null && now - this.startedAt >= this.durationMs) {
+    if (
+      this.durationMs > 0 &&
+      this.startedAt != null &&
+      now - this.startedAt >= this.durationMs
+    ) {
       this.finish(now);
       return true;
     }
@@ -133,7 +163,11 @@ export class TenkeySession {
   finish(now: number): void {
     if (this.phase === "done" || this.phase === "aborted") return;
     this.phase = "done";
-    this.endedAt = this.startedAt != null ? this.startedAt + this.durationMs : now;
+    if (this.durationMs > 0 && this.startedAt != null) {
+      this.endedAt = Math.min(now, this.startedAt + this.durationMs);
+    } else {
+      this.endedAt = now;
+    }
   }
 
   handleKey(input: KeyInput, now: number): HandleResult {
@@ -159,9 +193,15 @@ export class TenkeySession {
       return { ...empty, kind: "digit", started: true };
     }
 
-    if (this.phase === "entering") return this.handleEntering(input, now);
-    if (this.phase === "awaiting_plus") return this.handleAwaitingPlus(input, now);
-    return this.handleAwaitingSlide(input, now);
+    let result: HandleResult;
+    if (this.phase === "entering") result = this.handleEntering(input, now);
+    else if (this.phase === "awaiting_plus") result = this.handleAwaitingPlus(input, now);
+    else result = this.handleAwaitingSlide(input, now);
+    if (this.isStackComplete()) {
+      this.finish(now);
+      return { ...result, finished: true };
+    }
+    return result;
   }
 
   private handleEntering(input: KeyInput, now: number): HandleResult {
@@ -170,6 +210,10 @@ export class TenkeySession {
       return this.result("extra");
     }
     if (isSlideKey(input)) {
+      if (this.stackSize != null && this.currentIndex >= this.stackSize) {
+        this.record(input, now, "extra");
+        return this.result("extra");
+      }
       this.currentIndex += 1;
       this.ensureLookahead();
       this.lastSlideAt = now;
@@ -202,6 +246,10 @@ export class TenkeySession {
 
   private handleAwaitingSlide(input: KeyInput, now: number): HandleResult {
     if (isSlideKey(input)) {
+      if (this.stackSize != null && this.currentIndex >= this.stackSize) {
+        this.record(input, now, "extra");
+        return this.result("extra");
+      }
       this.currentIndex += 1;
       this.entryIndex = this.currentIndex;
       this.ensureLookahead();
@@ -315,6 +363,7 @@ export class TenkeySession {
 
   private ensureLookahead(): void {
     while (this.checks.length < this.currentIndex + 4) {
+      if (this.stackSize != null && this.checks.length >= this.stackSize) return;
       const index = this.checks.length;
       this.checks.push(generateCheck(this.rng, index, this.startNumber));
     }

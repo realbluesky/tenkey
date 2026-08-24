@@ -116,4 +116,25 @@ describe("computeScore", () => {
     expect(Math.round(score.grossKph)).toBe(10000);
     expect(score.uncorrectedAccuracy).toBe(1);
   });
+
+  it("uses elapsed time for stack tests with no duration cap", () => {
+    const score = computeScore(
+      {
+        startedAt: 0,
+        endedAt: 1_800_000,
+        durationMs: 0,
+        events: Array.from({ length: 5000 }, (_, i) => ({
+          atMs: i,
+          key: "1",
+          code: "",
+          kind: "digit" as const,
+        })),
+        submissions: [],
+        buffer: [],
+        phase: "done",
+      },
+      1_800_000,
+    );
+    expect(Math.round(score.grossKph)).toBe(10000);
+  });
 });

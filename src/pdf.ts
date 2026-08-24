@@ -1,8 +1,8 @@
 import { jsPDF } from "jspdf";
 import { formatMoney } from "./engine/amounts";
-import { formatClock, formatKph, formatPct, kphBand } from "./engine/scoring";
+import { formatClock, formatKph, formatPct, goalLabel, kphBand } from "./engine/scoring";
+import { bestsByGoal, type StoredSession, type Store } from "./storage";
 import type { Score } from "./engine/types";
-import { bestsByDuration, type StoredSession, type Store } from "./storage";
 import { VERSION } from "./version";
 
 const INK = "#1c1916";
@@ -15,6 +15,7 @@ export type ReportSession = {
   name: string;
   at: number;
   durationMs: number;
+  stackSize: number | null;
   practice: boolean;
   score: Score;
   sessionId: string;
@@ -67,12 +68,6 @@ function metric(doc: jsPDF, x: number, y: number, label: string, value: string):
   doc.text(value, x, y + 18);
 }
 
-function durationLabel(ms: number): string {
-  if (ms < 60_000) return `${Math.round(ms / 1000)} seconds`;
-  const minutes = ms / 60_000;
-  return minutes === 1 ? "1 minute" : `${minutes} minutes`;
-}
-
 export function downloadSessionReport(report: ReportSession): void {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   doc.setFillColor(PAPER);
@@ -91,7 +86,11 @@ export function downloadSessionReport(report: ReportSession): void {
   doc.text(`Operator  ${operator}`, 40, y);
   doc.text(`Date  ${when}`, 320, y);
   y += 18;
-  doc.text(`Duration  ${durationLabel(report.durationMs)}  (${formatClock(report.score.elapsedMs)} elapsed)`, 40, y);
+  doc.text(
+    `Length  ${goalLabel(report)}  (${formatClock(report.score.elapsedMs)} elapsed)`,
+    40,
+    y,
+  );
   doc.text(`Mode  Check Totals · ${report.practice ? "Practice" : "Exam"}`, 320, y);
   y += 28;
 
@@ -166,7 +165,7 @@ export function downloadBestsReport(store: Store): void {
   doc.text(`Prepared  ${new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}`, 320, y);
   y += 28;
 
-  const bests = [...bestsByDuration(store).entries()].sort((a, b) => a[0] - b[0]);
+  const bests = bestsByGoal(store);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(GREEN);
@@ -183,9 +182,9 @@ export function downloadBestsReport(store: Store): void {
     y = table(
       doc,
       y,
-      ["Duration", "Net KPH", "Accuracy", "Checks", "Date"],
-      bests.map(([ms, session]) => [
-        durationLabel(ms),
+      ["Length", "Net KPH", "Accuracy", "Checks", "Date"],
+      bests.map((session) => [
+        goalLabel(session),
         formatKph(session.score.netKph),
         formatPct(session.score.amountAccuracy),
         `${session.score.checksCorrect}/${session.score.checksSubmitted}`,
@@ -215,7 +214,7 @@ export function downloadBestsReport(store: Store): void {
       recent.map((session) => [
         new Date(session.at).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }),
         session.practice ? "Practice" : "Exam",
-        durationLabel(session.durationMs),
+        goalLabel(session),
         formatKph(session.score.netKph),
         formatPct(session.score.amountAccuracy),
       ]),
@@ -267,6 +266,7 @@ export function sessionToReport(
     name: session.name || fallbackName,
     at: session.at,
     durationMs: session.durationMs,
+    stackSize: session.stackSize ?? null,
     practice: session.practice,
     score: session.score,
     sessionId: session.id,

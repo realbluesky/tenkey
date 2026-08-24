@@ -5,6 +5,7 @@ import {
   formatKph,
   formatMoney,
   formatPct,
+  goalLabel,
   kphBand,
   TenkeySession,
 } from "./engine";
@@ -12,7 +13,7 @@ import { VERSION } from "./version";
 import type { CheckItem, KeyInput } from "./engine";
 import { downloadBestsReport, downloadSessionReport, sessionToReport } from "./pdf";
 import {
-  bestsByDuration,
+  bestsByGoal,
   checkIn,
   loadStore,
   operatorStore,
@@ -63,6 +64,8 @@ export function boot(): void {
 class App {
   private store: Store = loadStore();
   private screen: Screen = "setup";
+  private lengthKind: "stack" | "time" = "stack";
+  private stackSize = 25;
   private durationMs = 60_000;
   private practice = true;
   private session: TenkeySession | null = null;
@@ -87,6 +90,18 @@ class App {
         event.preventDefault();
         this.checkInFromInput();
       }
+    });
+    $("#length-pills").addEventListener("click", (event) => {
+      const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-length]");
+      if (!btn) return;
+      this.lengthKind = btn.dataset.length === "time" ? "time" : "stack";
+      this.renderPills();
+    });
+    $("#stack-pills").addEventListener("click", (event) => {
+      const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-stack]");
+      if (!btn) return;
+      this.stackSize = Number(btn.dataset.stack);
+      this.renderPills();
     });
     $("#duration-pills").addEventListener("click", (event) => {
       const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-ms]");
@@ -146,16 +161,15 @@ class App {
     const who = this.store.name.trim();
     $("#bests-heading").textContent = who ? `${who} · exam bests` : "Personal bests (exam)";
     $("#recent-heading").textContent = who ? `${who} · recent` : "Recent";
-    const bests = [...bestsByDuration(this.store).entries()].sort((a, b) => a[0] - b[0]);
+    const bests = bestsByGoal(this.store);
     $("#bests-empty").hidden = bests.length > 0;
     $("#bests-empty").textContent = who
       ? `No exam sessions for ${who} yet.`
       : "No exam sessions on this station yet.";
     const list = $("#bests-list");
     list.innerHTML = bests
-      .map(([ms, session]) => {
-        const dur = DURATIONS.find((d) => d.ms === ms)?.label ?? formatClock(ms);
-        return `<li><span>${dur}</span><strong>${formatKph(session.score.netKph)} KPH</strong><em>${formatPct(session.score.amountAccuracy)}</em></li>`;
+      .map((session) => {
+        return `<li><span>${goalLabel(session)}</span><strong>${formatKph(session.score.netKph)} KPH</strong><em>${formatPct(session.score.amountAccuracy)}</em></li>`;
       })
       .join("");
 
@@ -169,7 +183,7 @@ class App {
     if (historyTable) historyTable.hidden = rows.length === 0;
     history.innerHTML = rows
       .map((session) => {
-        const dur = DURATIONS.find((d) => d.ms === session.durationMs)?.label ?? formatClock(session.durationMs);
+        const dur = goalLabel(session);
         const when = new Date(session.at).toLocaleString("en-US", {
           month: "short",
           day: "numeric",
@@ -264,6 +278,12 @@ class App {
   }
 
   private renderPills(): void {
+    for (const btn of document.querySelectorAll<HTMLElement>("#length-pills [data-length]")) {
+      btn.classList.toggle("is-on", btn.dataset.length === this.lengthKind);
+    }
+    for (const btn of document.querySelectorAll<HTMLElement>("#stack-pills [data-stack]")) {
+      btn.classList.toggle("is-on", Number(btn.dataset.stack) === this.stackSize);
+    }
     for (const btn of document.querySelectorAll<HTMLElement>("#duration-pills [data-ms]")) {
       btn.classList.toggle("is-on", Number(btn.dataset.ms) === this.durationMs);
     }
@@ -271,6 +291,8 @@ class App {
       const isPractice = btn.dataset.mode === "practice";
       btn.classList.toggle("is-on", isPractice === this.practice);
     }
+    $("#stack-field").hidden = this.lengthKind !== "stack";
+    $("#duration-field").hidden = this.lengthKind !== "time";
   }
 
   private start(seed?: number): void {
@@ -284,7 +306,8 @@ class App {
     }
     this.stopTimer();
     this.session = new TenkeySession({
-      durationMs: this.durationMs,
+      durationMs: this.lengthKind === "time" ? this.durationMs : 0,
+      stackSize: this.lengthKind === "stack" ? this.stackSize : null,
       practice: this.practice,
       seed,
     });
@@ -362,9 +385,11 @@ class App {
     const leaving = this.front;
     const revealed = this.waiting;
     leaving.classList.add("is-leaving");
-    revealed.classList.remove("is-waiting");
-    revealed.classList.add("is-current");
-    this.front = revealed;
+    if (!revealed.hidden) {
+      revealed.classList.remove("is-waiting");
+      revealed.classList.add("is-current");
+      this.front = revealed;
+    }
     this.pendingLeave = leaving;
     if (recycle) {
       this.slideTimer = window.setTimeout(() => this.finishSlideSwap(), 280);
@@ -378,9 +403,14 @@ class App {
       this.slideTimer = null;
     }
     const returning = this.pendingLeave;
-    const demoted = this.front;
+    returning.hidden = false;
     returning.classList.remove("is-leaving", "is-settling");
     returning.classList.add("is-current");
+    if (this.front === returning) {
+      this.pendingLeave = null;
+      return;
+    }
+    const demoted = this.front;
     demoted.classList.remove("is-current");
     demoted.classList.add("is-waiting");
     this.front = returning;
@@ -400,7 +430,12 @@ class App {
     leaving.classList.remove("is-leaving", "is-current");
     leaving.classList.add("is-waiting");
     const next = this.session.checks[this.session.currentIndex + 1];
-    if (next) fillCheck(leaving, next);
+    if (next) {
+      leaving.hidden = false;
+      fillCheck(leaving, next);
+    } else {
+      leaving.hidden = true;
+    }
     this.waiting = leaving;
     window.requestAnimationFrame(() => leaving.classList.remove("is-settling"));
   }
@@ -422,6 +457,7 @@ class App {
       at: Date.now(),
       name: this.store.name,
       durationMs: this.session.durationMs,
+      stackSize: this.session.stackSize,
       seed: this.session.seed,
       practice: this.session.practice,
       score,
@@ -445,8 +481,15 @@ class App {
     this.front.classList.add("is-current");
     this.waiting.classList.remove("is-leaving", "is-settling", "is-current");
     this.waiting.classList.add("is-waiting");
-    fillCheck(this.front, this.session.current);
+    const current = this.session.checks[this.session.currentIndex];
+    if (current) {
+      this.front.hidden = false;
+      fillCheck(this.front, current);
+    } else {
+      this.front.hidden = true;
+    }
     const next = this.session.checks[this.session.currentIndex + 1];
+    this.waiting.hidden = !next;
     if (next) fillCheck(this.waiting, next);
   }
 
@@ -485,12 +528,21 @@ class App {
   private renderHint(): void {
     if (!this.session) return;
     const hint = $("#hint");
+    const last =
+      this.session.stackSize != null &&
+      this.session.hasCurrentCheck &&
+      this.session.currentIndex === this.session.stackSize - 1;
     if (this.session.phase === "armed") {
-      hint.textContent = "First digit starts the clock.";
+      hint.textContent = last
+        ? "Last check. First digit starts."
+        : "First digit starts the clock.";
     } else if (this.session.phase === "awaiting_slide") {
-      hint.textContent = "Tab — slide this check aside.";
+      hint.textContent = last ? "Tab — last check, then you're done." : "Tab — slide this check aside.";
     } else if (this.session.phase === "awaiting_plus") {
-      hint.textContent = "+ to add. Shift+Tab brings the check back.";
+      hint.textContent =
+        this.session.stackSize != null && this.session.entryIndex === this.session.stackSize - 1
+          ? "+ to add the last check and finish. Shift+Tab brings it back."
+          : "+ to add. Shift+Tab brings the check back.";
     } else if (this.session.buffer.length === 0) {
       hint.textContent = "Enter the amount, then + or Tab.";
     } else if (this.session.buffer.some((ch) => ch.miskey)) {
@@ -498,15 +550,24 @@ class App {
     } else {
       hint.textContent = "+ to add, or Tab to slide first.";
     }
-    this.front?.classList.toggle("is-whole", this.session.current.wholeDollar);
+    const current = this.session.checks[this.session.currentIndex];
+    this.front?.classList.toggle("is-whole", Boolean(current?.wholeDollar));
   }
 
   private renderLive(now: number): void {
     if (!this.session) return;
     const score = this.session.snapshot(now);
-    $("#stat-time").textContent = formatClock(this.session.remainingMs(now));
-    const elapsed =
-      this.session.startedAt == null ? 0 : now - this.session.startedAt;
+    const elapsed = this.session.elapsedMs(now);
+    const stack = this.session.stackSize;
+    $("#stat-progress-wrap").hidden = stack == null;
+    if (stack != null) {
+      $("#stat-progress").textContent = `${this.session.clearedCount}/${stack}`;
+      $("#stat-time-label").textContent = "elapsed";
+      $("#stat-time").textContent = formatClock(elapsed);
+    } else {
+      $("#stat-time-label").textContent = "time";
+      $("#stat-time").textContent = formatClock(this.session.remainingMs(now));
+    }
     const liveReady = this.session.startedAt != null && elapsed >= 2000;
     $("#stat-kph").textContent = liveReady ? formatKph(score.netKph) : "—";
     $("#stat-acc").textContent =
@@ -523,7 +584,7 @@ class App {
     $("#res-kph").textContent = formatKph(score.netKph);
     $("#res-acc").textContent = formatPct(score.amountAccuracy);
     $("#res-band").textContent = kphBand(score.netKph);
-    $("#res-mode").textContent = `${stored.practice ? "Practice" : "Exam"} · ${durationName(stored.durationMs)}`;
+    $("#res-mode").textContent = `${stored.practice ? "Practice" : "Exam"} · ${goalLabel(stored)}`;
     $("#res-gross").textContent = formatKph(score.grossKph);
     $("#res-numeric").textContent = formatKph(score.numericKph);
     $("#res-corr-acc").textContent = formatPct(score.correctedAccuracy);
@@ -546,7 +607,12 @@ class App {
       leftover.textContent = "";
     }
 
-    const best = personalBest(this.store, stored.durationMs, stored.practice);
+    const best = personalBest(
+      this.store,
+      stored.durationMs,
+      stored.practice,
+      stored.stackSize ?? null,
+    );
     const pb = $("#res-pb");
     if (best && best.id !== stored.id && best.score.netKph > 0) {
       pb.hidden = false;
@@ -577,10 +643,6 @@ class App {
       this.timer = null;
     }
   }
-}
-
-function durationName(ms: number): string {
-  return DURATIONS.find((d) => d.ms === ms)?.name ?? formatClock(ms);
 }
 
 function fillCheck(root: HTMLElement, check: CheckItem): void {

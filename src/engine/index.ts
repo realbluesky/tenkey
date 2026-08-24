@@ -13,6 +13,8 @@ export {
   formatKph,
   formatPct,
   formatClock,
+  formatDuration,
+  goalLabel,
   kphBand,
   levenshtein,
 } from "./scoring";

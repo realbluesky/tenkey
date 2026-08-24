@@ -147,6 +147,32 @@ describe("TenkeySession", () => {
     expect(score.keystrokes).toBeGreaterThan(3);
   });
 
+  it("finishes a stack after the last plus and Tab", () => {
+    const session = new TenkeySession({ stackSize: 2, practice: true, seed: 9 });
+    expect(session.checks.length).toBe(2);
+    runCheck(session, canonicalEntry(session.current), 0);
+    expect(session.phase).not.toBe("done");
+    const last = session.current;
+    typeAmount(session, canonicalEntry(last), 50);
+    session.handleKey(key("+"), 51);
+    const done = session.handleKey(tab(), 52);
+    expect(done.finished).toBe(true);
+    expect(session.phase).toBe("done");
+    expect(session.submissions).toHaveLength(2);
+  });
+
+  it("finishes a stack when Tab comes before plus on the last check", () => {
+    const session = new TenkeySession({ stackSize: 1, practice: true, seed: 3 });
+    const expected = canonicalEntry(session.current);
+    typeAmount(session, expected, 0);
+    session.handleKey(tab(), 1);
+    expect(session.phase).toBe("awaiting_plus");
+    const plus = session.handleKey(key("+"), 2);
+    expect(plus.finished).toBe(true);
+    expect(session.phase).toBe("done");
+    expect(session.submissions).toHaveLength(1);
+  });
+
   it("tracks entered vs true totals", () => {
     const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 4 });
     const first = session.current;

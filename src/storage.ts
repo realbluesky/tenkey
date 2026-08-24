@@ -8,6 +8,7 @@ export type StoredSession = {
   at: number;
   name: string;
   durationMs: number;
+  stackSize: number | null;
   seed: number;
   practice: boolean;
   score: Score;
@@ -93,12 +94,36 @@ export function operatorStore(store: Store): Store {
   };
 }
 
-export function bestsByDuration(store: Store): Map<number, StoredSession> {
-  const map = new Map<number, StoredSession>();
+export function goalKey(session: StoredSession): string {
+  if (session.stackSize) return `stack:${session.stackSize}`;
+  return `time:${session.durationMs}`;
+}
+
+export function bestsByGoal(store: Store): StoredSession[] {
+  const map = new Map<string, StoredSession>();
   for (const session of sessionsFor(store)) {
     if (session.practice) continue;
-    const prev = map.get(session.durationMs);
-    if (!prev || better(session, prev)) map.set(session.durationMs, session);
+    const key = goalKey(session);
+    const prev = map.get(key);
+    if (!prev || better(session, prev)) map.set(key, session);
+  }
+  return [...map.values()].sort((a, b) => {
+    const aStack = a.stackSize ?? 0;
+    const bStack = b.stackSize ?? 0;
+    if (aStack !== bStack) {
+      if (aStack === 0) return 1;
+      if (bStack === 0) return -1;
+      return aStack - bStack;
+    }
+    return a.durationMs - b.durationMs;
+  });
+}
+
+export function bestsByDuration(store: Store): Map<number, StoredSession> {
+  const map = new Map<number, StoredSession>();
+  for (const session of bestsByGoal(store)) {
+    if (session.stackSize) continue;
+    map.set(session.durationMs, session);
   }
   return map;
 }
@@ -113,11 +138,14 @@ export function personalBest(
   store: Store,
   durationMs: number,
   practice: boolean,
+  stackSize: number | null = null,
 ): StoredSession | null {
   let best: StoredSession | null = null;
   for (const session of sessionsFor(store)) {
-    if (session.durationMs !== durationMs) continue;
     if (session.practice !== practice) continue;
+    const sessionStack = session.stackSize ?? null;
+    if ((stackSize ?? null) !== sessionStack) continue;
+    if (!stackSize && session.durationMs !== durationMs) continue;
     if (!best || better(session, best)) best = session;
   }
   return best;

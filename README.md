@@ -6,7 +6,7 @@ Live: [realbluesky.github.io/tenkey](https://realbluesky.github.io/tenkey/)
 
 ## How it works
 
-1. Pick a duration. The stack of checks is endless for that window.
+1. Pick a **stack** (10–100 checks, default) or a **timed** run. A stack ends when you finish the last check; timed runs keep an endless stack until the clock hits zero.
 2. Type the amount from the top check.
 3. Press `+` to add it toward the running total, and `Tab` to slide the check aside — either order.
 4. `Shift+Tab` brings a check back if you slid too soon.

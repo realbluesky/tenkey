@@ -43,7 +43,8 @@ export function computeScore(input: {
 }, now: number): Score {
   const started = input.startedAt ?? now;
   const ended = input.endedAt ?? now;
-  const elapsedMs = Math.max(0, Math.min(input.durationMs, ended - started));
+  let elapsedMs = Math.max(0, ended - started);
+  if (input.durationMs > 0) elapsedMs = Math.min(input.durationMs, elapsedMs);
   const hours = elapsedMs / 3_600_000;
 
   const counted = input.events.filter((event) => event.kind !== "ignored");
@@ -145,4 +146,18 @@ export function formatClock(ms: number): string {
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+export function formatDuration(ms: number): string {
+  if (ms <= 0) return "stack";
+  if (ms < 60_000) return `${Math.round(ms / 1000)} seconds`;
+  const minutes = ms / 60_000;
+  return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+}
+
+export function goalLabel(session: { stackSize?: number | null; durationMs: number }): string {
+  if (session.stackSize && session.stackSize > 0) {
+    return session.stackSize === 1 ? "1 check" : `${session.stackSize} checks`;
+  }
+  return formatDuration(session.durationMs);
 }
