@@ -47,7 +47,9 @@ export function computeScore(input: {
   if (input.durationMs > 0) elapsedMs = Math.min(input.durationMs, elapsedMs);
   const hours = elapsedMs / 3_600_000;
 
-  const counted = input.events.filter((event) => event.kind !== "ignored");
+  const counted = input.events.filter(
+    (event) => event.kind !== "ignored" && !isDeskKind(event.kind),
+  );
   const keystrokes = counted.length;
   const numericKeystrokes = counted.filter(
     (event) => event.kind === "digit" || event.kind === "decimal",
@@ -64,13 +66,7 @@ export function computeScore(input: {
   const checksCorrect = input.submissions.filter((sub) => sub.correct).length;
   const uncorrectedErrors = checksSubmitted - checksCorrect;
 
-  const errorKeys = counted.filter(
-    (event) =>
-      event.kind === "miskey" ||
-      event.kind === "backspace" ||
-      event.kind === "extra" ||
-      event.kind === "unslide",
-  ).length;
+  const errorKeys = counted.filter((event) => isKphErrorKind(event.kind)).length;
 
   const grossKph = hours > 0 ? keystrokes / hours : 0;
   const netKph = hours > 0 ? Math.max(0, keystrokes - errorKeys) / hours : 0;
@@ -123,6 +119,14 @@ export function computeScore(input: {
     trueTotalCents,
     leftoverRaw,
   };
+}
+
+export function isDeskKind(kind: string): boolean {
+  return kind === "slide" || kind === "unslide";
+}
+
+export function isKphErrorKind(kind: string): boolean {
+  return kind === "miskey" || kind === "backspace" || kind === "extra";
 }
 
 export function kphBand(netKph: number): string {

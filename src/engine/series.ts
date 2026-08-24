@@ -1,3 +1,4 @@
+import { isDeskKind, isKphErrorKind } from "./scoring";
 import type { Keystroke } from "./types";
 
 export type PacePoint = {
@@ -5,13 +6,8 @@ export type PacePoint = {
   kph: number;
 };
 
-const ERROR_KINDS = new Set(["miskey", "backspace", "extra", "unslide"]);
 const WARMUP_MS = 2000;
 const MAX_POINTS = 56;
-
-export function isErrorKind(kind: string): boolean {
-  return ERROR_KINDS.has(kind);
-}
 
 export function buildPace(
   events: Keystroke[],
@@ -22,7 +18,7 @@ export function buildPace(
   const elapsed = Math.max(0, endedAt - startedAt);
   if (elapsed <= 0) return [];
   const counted = events
-    .filter((event) => event.kind !== "ignored")
+    .filter((event) => event.kind !== "ignored" && !isDeskKind(event.kind))
     .slice()
     .sort((a, b) => a.atMs - b.atMs);
   if (counted.length === 0) return [];
@@ -41,7 +37,7 @@ export function buildPace(
     const at = startedAt + t;
     while (i < counted.length && counted[i]!.atMs <= at) {
       keys += 1;
-      if (isErrorKind(counted[i]!.kind)) errors += 1;
+      if (isKphErrorKind(counted[i]!.kind)) errors += 1;
       i += 1;
     }
     const hours = t / 3_600_000;

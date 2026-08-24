@@ -114,7 +114,7 @@ export function downloadSessionReport(report: ReportSession): void {
 
   const rows: [string, string][] = [
     ["Band", kphBand(report.score.netKph)],
-    ["Numeric KPH", formatKph(report.score.numericKph)],
+    ["Numeric KPH (digits + decimal)", formatKph(report.score.numericKph)],
     ["Keystrokes", String(report.score.keystrokes)],
     ["Corrected errors (backspaces)", String(report.score.correctedErrors)],
     ["Uncorrected errors", String(report.score.uncorrectedErrors)],
@@ -138,7 +138,7 @@ export function downloadSessionReport(report: ReportSession): void {
   doc.setFontSize(9);
   doc.setTextColor(MUTED);
   const note = [
-    "Net KPH counts productive keystrokes (digits, decimal, +, and slide) scaled to an hour.",
+    "Net KPH is productive keypad work (digits, decimal, and +). Tab is desk movement and is not counted.",
     "Gross KPH includes miskeys, extra keys, and backspaces. Numeric KPH counts only 0–9 and the decimal.",
     "Trailing zeros after the decimal may be omitted (4 for $4.00, 73.7 for $73.70).",
     "Accuracy is submitted checks that ended up right after any backspaces. Uncorrected errors are wrong submitted amounts only; an unfinished check when time expires is not an error. Corrected accuracy also treats backspaces as errors.",

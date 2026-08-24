@@ -137,4 +137,35 @@ describe("computeScore", () => {
     );
     expect(Math.round(score.grossKph)).toBe(10000);
   });
+
+  it("excludes Tab/slide from all KPH rates", () => {
+    const score = computeScore(
+      {
+        startedAt: 0,
+        endedAt: 3_600_000,
+        durationMs: 3_600_000,
+        events: [
+          ...Array.from({ length: 8000 }, (_, i) => ({
+            atMs: i,
+            key: "1",
+            code: "",
+            kind: "digit" as const,
+          })),
+          ...Array.from({ length: 2000 }, (_, i) => ({
+            atMs: 8000 + i,
+            key: "Tab",
+            code: "Tab",
+            kind: "slide" as const,
+          })),
+        ],
+        submissions: [],
+        buffer: [],
+        phase: "done",
+      },
+      3_600_000,
+    );
+    expect(Math.round(score.grossKph)).toBe(8000);
+    expect(Math.round(score.netKph)).toBe(8000);
+    expect(Math.round(score.numericKph)).toBe(8000);
+  });
 });
