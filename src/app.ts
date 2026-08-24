@@ -15,6 +15,7 @@ import {
 } from "./engine";
 import { buildPace } from "./engine/series";
 import { renderPaceSvg } from "./chart";
+import { readoffFollowScrollTop } from "./readoff-scroll";
 import { VERSION } from "./version";
 import type { CheckItem, DeskKind, KeyInput, SourceKind } from "./engine";
 import { downloadBestsReport, downloadSessionReport, sessionToReport } from "./pdf";
@@ -669,7 +670,17 @@ class App {
       session.stackSize != null
         ? `${total} ${itemNoun("transcription", total)}`
         : "open list";
-    list.querySelector(".is-current")?.scrollIntoView({ block: "nearest" });
+    const currentRow = list.querySelector<HTMLElement>(".is-current");
+    if (currentRow) {
+      const currentTop =
+        currentRow.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+      list.scrollTop = readoffFollowScrollTop({
+        viewH: list.clientHeight,
+        scrollH: list.scrollHeight,
+        currentTop,
+        currentH: currentRow.offsetHeight,
+      });
+    }
   }
 
   private renderTape(): void {

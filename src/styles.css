@@ -546,6 +546,7 @@ h1 {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  overflow-anchor: none;
   list-style: none;
   margin: 0;
   padding: 8px 0 12px;
