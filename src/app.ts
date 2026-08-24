@@ -138,7 +138,7 @@ class App {
     list.innerHTML = bests
       .map(([ms, session]) => {
         const dur = DURATIONS.find((d) => d.ms === ms)?.label ?? formatClock(ms);
-        return `<li><span>${dur}</span><strong>${formatKph(session.score.netKph)} KPH</strong><em>${formatPct(session.score.uncorrectedAccuracy)}</em></li>`;
+        return `<li><span>${dur}</span><strong>${formatKph(session.score.netKph)} KPH</strong><em>${formatPct(session.score.amountAccuracy)}</em></li>`;
       })
       .join("");
 
@@ -161,7 +161,7 @@ class App {
           <td>${session.practice ? "Practice" : "Exam"}</td>
           <td>${dur}</td>
           <td>${formatKph(session.score.netKph)}</td>
-          <td>${formatPct(session.score.uncorrectedAccuracy)}</td>
+          <td>${formatPct(session.score.amountAccuracy)}</td>
         </tr>`;
       })
       .join("");
@@ -408,7 +408,7 @@ class App {
     $("#stat-acc").textContent =
       this.session.startedAt == null || this.session.submissions.length === 0
         ? "—"
-        : formatPct(score.uncorrectedAccuracy);
+        : formatPct(score.amountAccuracy);
   }
 
   private renderResults(): void {
@@ -417,7 +417,7 @@ class App {
     if (!stored || !session) return;
     const score = stored.score;
     $("#res-kph").textContent = formatKph(score.netKph);
-    $("#res-acc").textContent = formatPct(score.uncorrectedAccuracy);
+    $("#res-acc").textContent = formatPct(score.amountAccuracy);
     $("#res-band").textContent = kphBand(score.netKph);
     $("#res-mode").textContent = `${stored.practice ? "Practice" : "Exam"} · ${durationName(stored.durationMs)}`;
     $("#res-gross").textContent = formatKph(score.grossKph);
@@ -436,7 +436,7 @@ class App {
     const leftover = $("#res-leftover");
     if (score.leftoverRaw) {
       leftover.hidden = false;
-      leftover.textContent = `Unfinished entry when time expired: ${score.leftoverRaw}`;
+      leftover.textContent = `Unfinished next check when time expired (${score.leftoverRaw}) — not counted as an error.`;
     } else {
       leftover.hidden = true;
       leftover.textContent = "";
@@ -446,7 +446,7 @@ class App {
     const pb = $("#res-pb");
     if (best && best.id !== stored.id && best.score.netKph > 0) {
       pb.hidden = false;
-      pb.textContent = `Personal best for this duration: ${formatKph(best.score.netKph)} net KPH at ${formatPct(best.score.uncorrectedAccuracy)}.`;
+      pb.textContent = `Personal best for this duration: ${formatKph(best.score.netKph)} net KPH at ${formatPct(best.score.amountAccuracy)}.`;
     } else if (best && best.id === stored.id) {
       pb.hidden = false;
       pb.textContent = "New personal best for this duration.";

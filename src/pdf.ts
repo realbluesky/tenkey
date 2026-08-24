@@ -97,7 +97,7 @@ export function downloadSessionReport(report: ReportSession): void {
   doc.roundedRect(40, y, 532, 96, 4, 4, "FD");
   metric(doc, 56, y + 22, "Net KPH", formatKph(report.score.netKph));
   metric(doc, 190, y + 22, "Gross KPH", formatKph(report.score.grossKph));
-  metric(doc, 330, y + 22, "Uncorrected accuracy", formatPct(report.score.uncorrectedAccuracy));
+  metric(doc, 330, y + 22, "Accuracy", formatPct(report.score.amountAccuracy));
   metric(doc, 470, y + 22, "Corrected accuracy", formatPct(report.score.correctedAccuracy));
   y += 118;
 
@@ -117,7 +117,6 @@ export function downloadSessionReport(report: ReportSession): void {
     ["Corrected errors (backspaces)", String(report.score.correctedErrors)],
     ["Uncorrected errors", String(report.score.uncorrectedErrors)],
     ["Checks correct / submitted", `${report.score.checksCorrect} / ${report.score.checksSubmitted}`],
-    ["Amount accuracy", formatPct(report.score.amountAccuracy)],
     ["Entered total", formatMoney(report.score.enteredTotalCents)],
     ["True total of submitted checks", formatMoney(report.score.trueTotalCents)],
     ["Session ID", report.sessionId],
@@ -140,7 +139,7 @@ export function downloadSessionReport(report: ReportSession): void {
     "Net KPH counts productive keystrokes (digits, decimal, +, and slide) scaled to an hour.",
     "Gross KPH includes miskeys, extra keys, and backspaces. Numeric KPH counts only 0–9 and the decimal.",
     "Trailing zeros after the decimal may be omitted (4 for $4.00, 73.7 for $73.70).",
-    "Uncorrected accuracy reflects remaining mistakes. Corrected accuracy also treats backspaces as errors.",
+    "Accuracy is submitted checks that ended up right after any backspaces. Uncorrected errors are wrong submitted amounts only; an unfinished check when time expires is not an error. Corrected accuracy also treats backspaces as errors.",
   ].join(" ");
   const wrapped = doc.splitTextToSize(note, 532);
   doc.text(wrapped, 40, y);
@@ -181,11 +180,11 @@ export function downloadBestsReport(store: Store): void {
     y = table(
       doc,
       y,
-      ["Duration", "Net KPH", "Uncorr. acc.", "Checks", "Date"],
+      ["Duration", "Net KPH", "Accuracy", "Checks", "Date"],
       bests.map(([ms, session]) => [
         durationLabel(ms),
         formatKph(session.score.netKph),
-        formatPct(session.score.uncorrectedAccuracy),
+        formatPct(session.score.amountAccuracy),
         `${session.score.checksCorrect}/${session.score.checksSubmitted}`,
         new Date(session.at).toLocaleDateString("en-US"),
       ]),
@@ -215,7 +214,7 @@ export function downloadBestsReport(store: Store): void {
         session.practice ? "Practice" : "Exam",
         durationLabel(session.durationMs),
         formatKph(session.score.netKph),
-        formatPct(session.score.uncorrectedAccuracy),
+        formatPct(session.score.amountAccuracy),
       ]),
     );
   }

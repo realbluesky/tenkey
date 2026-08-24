@@ -53,17 +53,15 @@ export function computeScore(input: {
   ).length;
   const correctedErrors = counted.filter((event) => event.kind === "backspace").length;
   const leftoverRaw = input.buffer.map((ch) => ch.ch).join("");
-  const leftoverActive =
-    leftoverRaw.length > 0 && (input.phase === "done" || input.phase === "aborted");
 
-  const uncorrectedChars =
-    input.submissions.reduce((sum, sub) => sum + uncorrectedCharsFor(sub), 0) +
-    (leftoverActive ? leftoverRaw.length : 0);
+  const uncorrectedChars = input.submissions.reduce(
+    (sum, sub) => sum + uncorrectedCharsFor(sub),
+    0,
+  );
 
   const checksSubmitted = input.submissions.length;
   const checksCorrect = input.submissions.filter((sub) => sub.correct).length;
-  const leftoverPenalty = leftoverActive ? 1 : 0;
-  const uncorrectedErrors = checksSubmitted - checksCorrect + leftoverPenalty;
+  const uncorrectedErrors = checksSubmitted - checksCorrect;
 
   const errorKeys = counted.filter(
     (event) =>
@@ -80,7 +78,7 @@ export function computeScore(input: {
   const expectedChars = input.submissions.reduce((sum, sub) => {
     const canonical = acceptableStrings(sub.check)[0]!;
     return sum + canonical.length;
-  }, 0) + (leftoverActive ? leftoverRaw.length : 0);
+  }, 0);
 
   const uncorrectedAccuracy =
     expectedChars + uncorrectedChars === 0

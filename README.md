@@ -21,9 +21,9 @@ Trailing zeros after the decimal may be omitted (`4` for $4.00, `73.7` for $73.7
 | Gross KPH | All counted keystrokes, scaled to an hour |
 | Net KPH | Gross minus miskeys, extra keys, and backspaces |
 | Numeric KPH | Digits and decimal only (closer to classic number-only 10-key tests) |
-| Uncorrected accuracy | Remaining mistakes vs expected characters |
+| Accuracy | Submitted checks that ended up right after any backspaces |
 | Corrected accuracy | Also treats backspaces as errors |
-| Amount accuracy | Correct checks / submitted checks |
+| Uncorrected errors | Wrong submitted amounts only (unfinished next check is not an error) |
 
 Results are stored in **localStorage** on this browser. Name yourself and download a PDF of a session or of exam personal bests.
 

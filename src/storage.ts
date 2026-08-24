@@ -64,8 +64,8 @@ export function bestsByDuration(store: Store): Map<number, StoredSession> {
 }
 
 export function better(a: StoredSession, b: StoredSession): boolean {
-  const aNet = a.score.netKph * a.score.uncorrectedAccuracy;
-  const bNet = b.score.netKph * b.score.uncorrectedAccuracy;
+  const aNet = a.score.netKph * a.score.amountAccuracy;
+  const bNet = b.score.netKph * b.score.amountAccuracy;
   return aNet > bNet;
 }
 

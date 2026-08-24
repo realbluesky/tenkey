@@ -59,6 +59,42 @@ describe("computeScore", () => {
     expect(score.uncorrectedErrors).toBe(0);
   });
 
+  it("does not treat an unfinished next check as an uncorrected error", () => {
+    const sub: Submission = {
+      check,
+      raw: "127.45",
+      parsedCents: 12745,
+      correct: true,
+      atMs: 10,
+    };
+    const score = computeScore(
+      {
+        startedAt: 0,
+        endedAt: 60_000,
+        durationMs: 60_000,
+        events: [
+          { atMs: 10, key: "1", code: "", kind: "digit" },
+          { atMs: 11, key: "Backspace", code: "", kind: "backspace" },
+          { atMs: 12, key: "1", code: "", kind: "digit" },
+        ],
+        submissions: [sub],
+        buffer: [
+          { ch: "9", miskey: false },
+          { ch: "4", miskey: false },
+        ],
+        phase: "done",
+      },
+      60_000,
+    );
+    expect(score.checksCorrect).toBe(1);
+    expect(score.checksSubmitted).toBe(1);
+    expect(score.uncorrectedErrors).toBe(0);
+    expect(score.uncorrectedAccuracy).toBe(1);
+    expect(score.amountAccuracy).toBe(1);
+    expect(score.correctedErrors).toBe(1);
+    expect(score.leftoverRaw).toBe("94");
+  });
+
   it("uses official duration as the KPH ceiling", () => {
     const score = computeScore(
       {
