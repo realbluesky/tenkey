@@ -15,8 +15,8 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Fraunces:opsz,wght@9..144,560;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Patrick+Hand&display=swap"
       rel="stylesheet"
     />
-    <script type="module" crossorigin src="./assets/index-B-ExVTLs.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-gxzB-2J5.css">
+    <script type="module" crossorigin src="./assets/index-DS_y4iCV.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-Y6FKH8KB.css">
   </head>
   <body>
     <div class="desk">
@@ -43,8 +43,8 @@
             <h1>Add the stack. Slide each check aside.</h1>
             <p class="lede">
               Type each amount, press <kbd>+</kbd> to add it, then
-              <kbd>Space</kbd> or <kbd>Left Ctrl</kbd> to move the check. The
-              clock starts on your first digit.
+              <kbd>Tab</kbd> to move the check. The clock starts on your first
+              digit.
             </p>
 
             <label class="field">
@@ -79,7 +79,7 @@
               <li>Read the amount in the box on the top check.</li>
               <li>Enter it on the 10-key. Whole-dollar checks may skip <code>.00</code>.</li>
               <li>Press <kbd>+</kbd> to add toward the total.</li>
-              <li>Press <kbd>Space</kbd> to slide the check off the stack.</li>
+              <li>Press <kbd>Tab</kbd> to slide the check off the stack.</li>
               <li>Alpha and stray keys show on the display and must be corrected.</li>
             </ol>
             <p class="fine numpad-note">
@@ -121,23 +121,42 @@
               <div class="paper peek p3"></div>
               <div class="paper peek p2"></div>
               <div class="paper peek p1"></div>
-              <article class="check" id="check">
+              <article class="check is-waiting" id="check-back" aria-hidden="true">
                 <header>
                   <span class="bank">TENKEY NATIONAL BANK</span>
-                  <span class="no">No. <em id="check-no">1001</em></span>
+                  <span class="no">No. <em class="check-no"></em></span>
                 </header>
                 <div class="pay-row">
                   <span>Pay to the<br />order of</span>
-                  <strong id="check-payee">Harbor &amp; Pine Supply</strong>
+                  <strong class="check-payee"></strong>
                 </div>
-                <div class="words" id="check-words">One hundred and 00/100 Dollars</div>
-                <div class="amount-box" id="amount-box">
+                <div class="words check-words"></div>
+                <div class="amount-box">
                   <span>$</span>
-                  <strong id="check-amount">0.00</strong>
+                  <strong class="check-amount">0.00</strong>
                 </div>
                 <footer>
-                  <div>Memo <em id="check-memo">invoice 4412</em></div>
-                  <div class="micr" id="check-micr"></div>
+                  <div>Memo <em class="check-memo"></em></div>
+                  <div class="micr check-micr"></div>
+                </footer>
+              </article>
+              <article class="check is-current" id="check-front">
+                <header>
+                  <span class="bank">TENKEY NATIONAL BANK</span>
+                  <span class="no">No. <em class="check-no">1001</em></span>
+                </header>
+                <div class="pay-row">
+                  <span>Pay to the<br />order of</span>
+                  <strong class="check-payee">Harbor &amp; Pine Supply</strong>
+                </div>
+                <div class="words check-words">One hundred and 00/100 Dollars</div>
+                <div class="amount-box">
+                  <span>$</span>
+                  <strong class="check-amount">0.00</strong>
+                </div>
+                <footer>
+                  <div>Memo <em class="check-memo">invoice 4412</em></div>
+                  <div class="micr check-micr"></div>
                 </footer>
               </article>
             </div>
@@ -169,7 +188,7 @@
               <button type="button" data-key="Backspace" class="bksp">⌫</button>
               <button type="button" data-key="0" class="zero">0</button>
               <button type="button" data-key="." data-code="NumpadDecimal">.</button>
-              <button type="button" data-key=" " class="slide">SLIDE</button>
+              <button type="button" data-key="Tab" data-code="Tab" class="slide">TAB</button>
             </div>
           </aside>
         </section>
