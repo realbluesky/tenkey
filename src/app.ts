@@ -13,13 +13,17 @@ import type { CheckItem, KeyInput } from "./engine";
 import { downloadBestsReport, downloadSessionReport, sessionToReport } from "./pdf";
 import {
   bestsByDuration,
+  checkIn,
   loadStore,
+  operatorStore,
   personalBest,
   recordSession,
-  setName,
+  sessionsFor,
   type Store,
   type StoredSession,
 } from "./storage";
+
+const NEW_OPERATOR = "__new__";
 
 export const DURATIONS = [
   { label: "0:30", name: "30 seconds", ms: 30_000 },
@@ -76,9 +80,13 @@ class App {
   }
 
   private bind(): void {
-    $("#name-input").addEventListener("input", (event) => {
-      const value = (event.target as HTMLInputElement).value;
-      this.store = setName(this.store, value);
+    $("#operator-select").addEventListener("change", () => this.onOperatorSelect());
+    $("#checkin-btn").addEventListener("click", () => this.checkInFromInput());
+    $("#name-input").addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        this.checkInFromInput();
+      }
     });
     $("#duration-pills").addEventListener("click", (event) => {
       const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-ms]");
@@ -101,8 +109,10 @@ class App {
     });
     $("#home-btn").addEventListener("click", () => this.show("setup"));
     $("#pdf-session-btn").addEventListener("click", () => this.pdfSession());
-    $("#pdf-bests-btn").addEventListener("click", () => downloadBestsReport(this.store));
-    $("#pdf-bests-setup-btn").addEventListener("click", () => downloadBestsReport(this.store));
+    $("#pdf-bests-btn").addEventListener("click", () => downloadBestsReport(operatorStore(this.store)));
+    $("#pdf-bests-setup-btn").addEventListener("click", () =>
+      downloadBestsReport(operatorStore(this.store)),
+    );
 
     document.addEventListener("keydown", (event) => this.onKey(event));
     $("#soft-keys").addEventListener("pointerdown", (event) => {
@@ -131,11 +141,16 @@ class App {
   }
 
   private renderSetup(): void {
-    const name = $("#name-input") as HTMLInputElement;
-    name.value = this.store.name;
+    this.renderCheckin();
     this.renderPills();
+    const who = this.store.name.trim();
+    $("#bests-heading").textContent = who ? `${who} · exam bests` : "Personal bests (exam)";
+    $("#recent-heading").textContent = who ? `${who} · recent` : "Recent";
     const bests = [...bestsByDuration(this.store).entries()].sort((a, b) => a[0] - b[0]);
     $("#bests-empty").hidden = bests.length > 0;
+    $("#bests-empty").textContent = who
+      ? `No exam sessions for ${who} yet.`
+      : "No exam sessions on this station yet.";
     const list = $("#bests-list");
     list.innerHTML = bests
       .map(([ms, session]) => {
@@ -145,8 +160,11 @@ class App {
       .join("");
 
     const history = $("#history-body");
-    const rows = this.store.sessions.slice(0, 8);
+    const rows = sessionsFor(this.store).slice(0, 8);
     $("#history-empty").hidden = rows.length > 0;
+    $("#history-empty").textContent = who
+      ? `No sessions for ${who} yet.`
+      : "Check in to see your scores.";
     const historyTable = document.querySelector<HTMLElement>(".history");
     if (historyTable) historyTable.hidden = rows.length === 0;
     history.innerHTML = rows
@@ -169,6 +187,82 @@ class App {
       .join("");
   }
 
+  private renderCheckin(): void {
+    const select = $("#operator-select") as HTMLSelectElement;
+    const input = $("#name-input") as HTMLInputElement;
+    const row = $("#new-operator-row");
+    const button = $("#checkin-btn");
+    const hint = $("#checkin-hint");
+    const error = $("#checkin-error");
+    error.hidden = true;
+    const operators = this.store.operators;
+    const adding = select.value === NEW_OPERATOR;
+
+    if (operators.length === 0) {
+      select.hidden = true;
+      row.hidden = false;
+      button.hidden = false;
+      input.value = this.store.name;
+      hint.textContent = "Type your name to check in at this station.";
+      return;
+    }
+
+    select.hidden = false;
+    const current = adding ? NEW_OPERATOR : this.store.name;
+    select.innerHTML = [
+      `<option value="">Select operator…</option>`,
+      ...operators.map(
+        (name) =>
+          `<option value="${escapeHtml(name)}"${name === current ? " selected" : ""}>${escapeHtml(name)}</option>`,
+      ),
+      `<option value="${NEW_OPERATOR}"${adding ? " selected" : ""}>Add a new operator…</option>`,
+    ].join("");
+    if (!adding && this.store.name) select.value = this.store.name;
+
+    const showNew = adding || !this.store.name;
+    row.hidden = !showNew;
+    button.hidden = !showNew;
+    if (showNew && adding) input.value = "";
+    else if (!adding) input.value = this.store.name;
+    hint.textContent = adding
+      ? "Enter the new operator name, then Check in."
+      : this.store.name
+        ? `Checked in as ${this.store.name}. Scores on the right are yours.`
+        : "Pick your name, or add a new operator.";
+  }
+
+  private onOperatorSelect(): void {
+    const select = $("#operator-select") as HTMLSelectElement;
+    if (select.value === NEW_OPERATOR) {
+      ($("#name-input") as HTMLInputElement).value = "";
+      this.renderCheckin();
+      ($("#name-input") as HTMLInputElement).focus();
+      return;
+    }
+    if (!select.value) {
+      this.store = checkIn(this.store, "");
+      this.renderSetup();
+      return;
+    }
+    this.store = checkIn(this.store, select.value);
+    ($("#name-input") as HTMLInputElement).value = this.store.name;
+    this.renderSetup();
+  }
+
+  private checkInFromInput(): boolean {
+    const input = $("#name-input") as HTMLInputElement;
+    const name = input.value.trim();
+    if (!name) {
+      $("#checkin-error").hidden = false;
+      input.focus();
+      return false;
+    }
+    this.store = checkIn(this.store, name);
+    ($("#operator-select") as HTMLSelectElement).value = this.store.name;
+    this.renderSetup();
+    return true;
+  }
+
   private renderPills(): void {
     for (const btn of document.querySelectorAll<HTMLElement>("#duration-pills [data-ms]")) {
       btn.classList.toggle("is-on", Number(btn.dataset.ms) === this.durationMs);
@@ -180,6 +274,14 @@ class App {
   }
 
   private start(seed?: number): void {
+    const select = $("#operator-select") as HTMLSelectElement;
+    if (!this.store.name.trim() || select.value === NEW_OPERATOR) {
+      if (!this.checkInFromInput()) return;
+    }
+    if (!this.store.name.trim()) {
+      $("#checkin-error").hidden = false;
+      return;
+    }
     this.stopTimer();
     this.session = new TenkeySession({
       durationMs: this.durationMs,
@@ -463,7 +565,7 @@ class App {
     if (!name) {
       const typed = window.prompt("Name for the official report?", this.store.name);
       if (typed == null) return;
-      this.store = setName(this.store, typed);
+      this.store = checkIn(this.store, typed);
       if (!this.store.name) return;
     }
     downloadSessionReport(sessionToReport(this.lastStored, this.store.name));

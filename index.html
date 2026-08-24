@@ -47,10 +47,16 @@
               back. The clock starts on your first digit.
             </p>
 
-            <label class="field">
-              <span>Operator name</span>
-              <input id="name-input" maxlength="40" placeholder="Your name" autocomplete="nickname" />
-            </label>
+            <div class="field">
+              <span>Check in</span>
+              <select id="operator-select" hidden></select>
+              <div id="new-operator-row" class="checkin-new">
+                <input id="name-input" maxlength="40" placeholder="Your name" autocomplete="nickname" />
+                <button type="button" id="checkin-btn" class="ghost">Check in</button>
+              </div>
+              <p class="fine" id="checkin-hint">Type your name to check in at this station.</p>
+              <p class="fine bad" id="checkin-error" hidden>Check in with a name before you start.</p>
+            </div>
 
             <div class="field">
               <span>Duration</span>
@@ -94,10 +100,10 @@
           </div>
 
           <aside class="side-card">
-            <h2>Personal bests (exam)</h2>
+            <h2 id="bests-heading">Personal bests (exam)</h2>
             <p id="bests-empty" class="muted">No exam sessions on this device yet.</p>
             <ul id="bests-list" class="bests"></ul>
-            <h2>Recent</h2>
+            <h2 id="recent-heading">Recent</h2>
             <p id="history-empty" class="muted">No sessions on this device yet.</p>
             <table class="history">
               <thead>

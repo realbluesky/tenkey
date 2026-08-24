@@ -278,16 +278,30 @@ h1 {
   color: var(--muted);
 }
 
-#name-input {
+#name-input,
+#operator-select {
   background: #fffdf7;
   border: 1px solid #d7ccb6;
   padding: 0.65rem 0.75rem;
   color: var(--ink);
   outline: none;
+  width: 100%;
 }
 
-#name-input:focus {
+#name-input:focus,
+#operator-select:focus {
   border-color: var(--brass-dim);
+}
+
+.checkin-new {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.checkin-new .ghost {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .pills {
