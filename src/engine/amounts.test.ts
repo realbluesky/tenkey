@@ -1,0 +1,88 @@
+import { describe, expect, it } from "vitest";
+import {
+  acceptableStrings,
+  isAcceptable,
+  parseEntry,
+  generateCheck,
+  WHOLE_DOLLAR_RATE,
+} from "./amounts";
+import { mulberry32 } from "./rng";
+import type { CheckItem } from "./types";
+
+function check(partial: Partial<CheckItem> & { cents: number; wholeDollar: boolean }): CheckItem {
+  return {
+    index: 0,
+    checkNumber: 1001,
+    payee: "Test",
+    memo: "invoice 1",
+    ...partial,
+  };
+}
+
+describe("parseEntry", () => {
+  it("parses whole dollars and decimal variants", () => {
+    expect(parseEntry("50")).toBe(5000);
+    expect(parseEntry("50.")).toBe(5000);
+    expect(parseEntry("50.0")).toBe(5000);
+    expect(parseEntry("50.00")).toBe(5000);
+    expect(parseEntry("127.45")).toBe(12745);
+    expect(parseEntry("0.07")).toBe(7);
+  });
+
+  it("rejects miskeys and extra precision", () => {
+    expect(parseEntry("50a")).toBeNull();
+    expect(parseEntry("12.345")).toBeNull();
+    expect(parseEntry(".50")).toBeNull();
+    expect(parseEntry("")).toBeNull();
+  });
+});
+
+describe("isAcceptable", () => {
+  const whole = check({ cents: 5000, wholeDollar: true });
+  const change = check({ cents: 12745, wholeDollar: false });
+
+  it("lets whole-dollar amounts skip pennies", () => {
+    expect(isAcceptable(whole, "50")).toBe(true);
+    expect(isAcceptable(whole, "50.00")).toBe(true);
+    expect(isAcceptable(whole, "50.0")).toBe(true);
+    expect(isAcceptable(whole, "50.")).toBe(true);
+    expect(isAcceptable(whole, "5000")).toBe(false);
+    expect(isAcceptable(whole, "51")).toBe(false);
+  });
+
+  it("requires pennies on non-whole amounts", () => {
+    expect(isAcceptable(change, "127.45")).toBe(true);
+    expect(isAcceptable(change, "127")).toBe(false);
+    expect(isAcceptable(change, "127.4")).toBe(false);
+    expect(isAcceptable(change, "127.46")).toBe(false);
+  });
+});
+
+describe("generateCheck", () => {
+  it("hits the whole-dollar rate over a large sample", () => {
+    const rng = mulberry32(42);
+    let whole = 0;
+    const n = 2000;
+    for (let i = 0; i < n; i++) {
+      if (generateCheck(rng, i).wholeDollar) whole++;
+    }
+    const rate = whole / n;
+    expect(rate).toBeGreaterThan(WHOLE_DOLLAR_RATE - 0.05);
+    expect(rate).toBeLessThan(WHOLE_DOLLAR_RATE + 0.05);
+  });
+
+  it("never generates a .00 amount marked as needing pennies", () => {
+    const rng = mulberry32(99);
+    for (let i = 0; i < 400; i++) {
+      const item = generateCheck(rng, i);
+      if (!item.wholeDollar) expect(item.cents % 100).not.toBe(0);
+      if (item.wholeDollar) expect(item.cents % 100).toBe(0);
+    }
+  });
+});
+
+describe("acceptableStrings", () => {
+  it("lists skip-penny forms for whole dollars", () => {
+    expect(acceptableStrings(check({ cents: 1200, wholeDollar: true }))).toContain("12");
+  });
+});
