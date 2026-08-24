@@ -716,30 +716,58 @@ h1 {
   gap: 10px;
 }
 
-.tape-window {
+.tape-house {
+  position: relative;
   flex: 1;
-  min-height: 90px;
-  background: #efe6cf;
-  color: var(--ink);
-  border-radius: 2px;
-  overflow: hidden;
+  min-height: 110px;
   display: flex;
   flex-direction: column;
+  margin-top: -4px;
 }
 
-.tape-head {
-  font-size: 0.62rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding: 6px 10px;
-  background: #e2d6b8;
-  color: var(--muted);
+.tape-slot {
+  position: absolute;
+  top: 9px;
+  left: -5px;
+  right: -5px;
+  height: 8px;
+  z-index: 3;
+  background: linear-gradient(180deg, #5a6058, #1c1e1b);
+  border-radius: 1px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.12),
+    0 3px 7px rgba(0, 0, 0, 0.45);
+}
+
+.tape-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--ink);
+  border-radius: 2px 2px 0 0;
+  background:
+    radial-gradient(circle at 7px 7px, #c9ba94 1.35px, transparent 1.55px) 0 0 / 100% 14px,
+    radial-gradient(circle at calc(100% - 7px) 7px, #c9ba94 1.35px, transparent 1.55px) 0 0 / 100% 14px,
+    repeating-linear-gradient(
+      180deg,
+      #f3ead3 0 13px,
+      #efe4c8 13px 14px
+    );
+}
+
+.tape-print {
+  height: 6px;
+  flex: 0 0 auto;
+  background: linear-gradient(180deg, #2c2e2a, #101210);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .tape {
-  flex: 1;
-  overflow: auto;
-  padding: 6px 10px 10px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 18px 16px 8px;
   font-family: var(--mono);
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
@@ -749,7 +777,22 @@ h1 {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 1px 0;
+  line-height: 1.35;
+  overflow: hidden;
+  max-height: 1.35em;
+}
+
+.tape-line.is-printing {
+  max-height: 0;
+  opacity: 0;
+}
+
+.tape-line.is-printed {
+  max-height: 1.35em;
+  opacity: 1;
+  transition:
+    max-height 110ms ease-out,
+    opacity 90ms ease-out;
 }
 
 .tape-line.ok {
@@ -962,8 +1005,13 @@ h1 {
 
 @media (prefers-reduced-motion: reduce) {
   .check,
-  .cursor {
+  .cursor,
+  .tape-line.is-printed {
     transition: none;
     animation: none;
+  }
+  .tape-line.is-printing {
+    max-height: 1.35em;
+    opacity: 1;
   }
 }

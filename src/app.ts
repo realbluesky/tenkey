@@ -78,6 +78,7 @@ class App {
   private front: HTMLElement | null = null;
   private waiting: HTMLElement | null = null;
   private pendingLeave: HTMLElement | null = null;
+  private tapePrinted = 0;
 
   mount(): void {
     $("#version-stamp").textContent = `v${VERSION}`;
@@ -324,6 +325,7 @@ class App {
       seed,
     });
     this.lastStored = null;
+    this.tapePrinted = 0;
     this.front = $("#check-front");
     this.waiting = $("#check-back");
     this.pendingLeave = null;
@@ -513,14 +515,37 @@ class App {
   private renderTape(): void {
     if (!this.session) return;
     const tape = $("#tape");
-    const lines = this.session.submissions.slice(-12).map((sub) => {
+    const subs = this.session.submissions;
+    if (subs.length === 0) {
+      tape.innerHTML = `<div class="tape-line dim"><span>ready</span><span></span></div>`;
+      this.tapePrinted = 0;
+      return;
+    }
+    if (this.tapePrinted === 0) tape.replaceChildren();
+    const motionOk = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    while (this.tapePrinted < subs.length) {
+      const sub = subs[this.tapePrinted]!;
       const amount = sub.parsedCents != null ? formatCheckAmount(sub.parsedCents) : sub.raw;
-      const mark = this.session!.practice ? (sub.correct ? " ✓" : " ✗") : "";
-      const cls = this.session!.practice ? (sub.correct ? "ok" : "bad") : "";
-      return `<div class="tape-line ${cls}"><span>${amount}</span><span>+${mark}</span></div>`;
-    });
-    tape.innerHTML = lines.join("") || `<div class="tape-line dim"><span>ready</span><span></span></div>`;
-    tape.scrollTop = tape.scrollHeight;
+      const mark = this.session.practice ? (sub.correct ? " ✓" : " ✗") : "";
+      const line = document.createElement("div");
+      line.className = `tape-line ${this.session.practice ? (sub.correct ? "ok" : "bad") : ""}`;
+      line.innerHTML = `<span>${amount}</span><span>+${mark}</span>`;
+      if (motionOk) {
+        line.classList.add("is-printing");
+        tape.append(line);
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            line.classList.remove("is-printing");
+            line.classList.add("is-printed");
+          });
+        });
+      } else {
+        line.classList.add("is-printed");
+        tape.append(line);
+      }
+      this.tapePrinted += 1;
+    }
+    while (tape.childElementCount > 28) tape.firstElementChild?.remove();
   }
 
   private renderEntry(): void {
