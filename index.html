@@ -15,8 +15,8 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Fraunces:opsz,wght@9..144,560;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Patrick+Hand&display=swap"
       rel="stylesheet"
     />
-    <script type="module" crossorigin src="./assets/index-DLf1N4pU.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-JQ13xn2S.css">
+    <script type="module" crossorigin src="./assets/index-CQ2-ivul.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DMwple_B.css">
   </head>
   <body>
     <div class="desk">
@@ -49,10 +49,16 @@
               back. The clock starts on your first digit.
             </p>
 
-            <label class="field">
-              <span>Operator name</span>
-              <input id="name-input" maxlength="40" placeholder="Your name" autocomplete="nickname" />
-            </label>
+            <div class="field">
+              <span>Check in</span>
+              <select id="operator-select" hidden></select>
+              <div id="new-operator-row" class="checkin-new">
+                <input id="name-input" maxlength="40" placeholder="Your name" autocomplete="nickname" />
+                <button type="button" id="checkin-btn" class="ghost">Check in</button>
+              </div>
+              <p class="fine" id="checkin-hint">Type your name to check in at this station.</p>
+              <p class="fine bad" id="checkin-error" hidden>Check in with a name before you start.</p>
+            </div>
 
             <div class="field">
               <span>Duration</span>
@@ -96,10 +102,10 @@
           </div>
 
           <aside class="side-card">
-            <h2>Personal bests (exam)</h2>
+            <h2 id="bests-heading">Personal bests (exam)</h2>
             <p id="bests-empty" class="muted">No exam sessions on this device yet.</p>
             <ul id="bests-list" class="bests"></ul>
-            <h2>Recent</h2>
+            <h2 id="recent-heading">Recent</h2>
             <p id="history-empty" class="muted">No sessions on this device yet.</p>
             <table class="history">
               <thead>
