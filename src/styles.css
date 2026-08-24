@@ -297,10 +297,15 @@ h1 {
 }
 
 .howto {
-  margin: 8px 0 22px;
+  margin: 8px 0 10px;
   padding-left: 1.2rem;
   color: var(--ink);
   line-height: 1.55;
+}
+
+.numpad-note {
+  margin: 0 0 22px;
+  max-width: 52ch;
 }
 
 .ticket-actions {
