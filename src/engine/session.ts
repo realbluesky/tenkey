@@ -4,6 +4,7 @@ import { computeScore } from "./scoring";
 import type {
   BufferChar,
   CheckItem,
+  DeskKind,
   HandleResult,
   KeyInput,
   KeyKind,
@@ -34,6 +35,14 @@ export function isPlusKey(input: KeyInput): boolean {
   return input.key === "+" || input.code === "NumpadAdd";
 }
 
+export function isEnterKey(input: KeyInput): boolean {
+  return input.key === "Enter" || input.code === "Enter" || input.code === "NumpadEnter";
+}
+
+export function isCommitKey(input: KeyInput, desk: DeskKind = "calculator"): boolean {
+  return desk === "spreadsheet" ? isEnterKey(input) : isPlusKey(input);
+}
+
 export function isSlideKey(input: KeyInput): boolean {
   return (input.key === "Tab" || input.code === "Tab") && !input.shiftKey;
 }
@@ -55,6 +64,7 @@ export class TenkeySession {
   readonly stackSize: number | null;
   readonly seed: number;
   readonly practice: boolean;
+  readonly desk: DeskKind;
   readonly id: string;
   phase: Phase = "armed";
   startedAt: number | null = null;
@@ -76,12 +86,14 @@ export class TenkeySession {
     stackSize?: number | null;
     seed?: number;
     practice: boolean;
+    desk?: DeskKind;
     id?: string;
   }) {
     this.stackSize = opts.stackSize ?? null;
     this.durationMs = this.stackSize ? 0 : (opts.durationMs ?? 60_000);
     this.seed = opts.seed ?? (Math.floor(Math.random() * 0xffffffff) >>> 0);
     this.practice = opts.practice;
+    this.desk = opts.desk ?? "calculator";
     this.id = opts.id ?? createId();
     this.rng = mulberry32(this.seed);
     this.startNumber = 1000 + Math.floor(this.rng() * 8000);
@@ -229,8 +241,12 @@ export class TenkeySession {
       this.record(input, now, "slide");
       return this.result("slide", { slid: true, recycle: false });
     }
-    if (isPlusKey(input)) {
+    if (isCommitKey(input, this.desk)) {
       return this.submit(input, now, "awaiting_slide", false);
+    }
+    if (isPlusKey(input) || isEnterKey(input)) {
+      this.record(input, now, "extra");
+      return this.result("extra");
     }
     return this.handleBuffer(input, now);
   }
@@ -246,8 +262,12 @@ export class TenkeySession {
       this.record(input, now, "extra");
       return this.result("extra");
     }
-    if (isPlusKey(input)) {
+    if (isCommitKey(input, this.desk)) {
       return this.submit(input, now, "entering", true);
+    }
+    if (isPlusKey(input) || isEnterKey(input)) {
+      this.record(input, now, "extra");
+      return this.result("extra");
     }
     return this.handleBuffer(input, now);
   }

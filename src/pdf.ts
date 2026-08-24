@@ -1,8 +1,8 @@
 import { jsPDF } from "jspdf";
 import { formatMoney } from "./engine/amounts";
-import { formatClock, formatKph, formatPct, goalLabel, kphBand } from "./engine/scoring";
-import { bestsByGoal, type StoredSession, type Store } from "./storage";
-import type { Score } from "./engine/types";
+import { deskNoun, deskTitle, formatClock, formatKph, formatPct, goalLabel, kphBand } from "./engine/scoring";
+import { bestsByGoal, sessionDesk, type StoredSession, type Store } from "./storage";
+import type { DeskKind, Score } from "./engine/types";
 import { VERSION } from "./version";
 
 const INK = "#1c1916";
@@ -17,6 +17,7 @@ export type ReportSession = {
   durationMs: number;
   stackSize: number | null;
   practice: boolean;
+  desk?: DeskKind;
   score: Score;
   sessionId: string;
   seed: number;
@@ -91,7 +92,11 @@ export function downloadSessionReport(report: ReportSession): void {
     40,
     y,
   );
-  doc.text(`Mode  Check Totals · ${report.practice ? "Practice" : "Exam"}`, 320, y);
+  doc.text(
+    `Mode  Check Totals · ${deskTitle(report.desk)} · ${report.practice ? "Practice" : "Exam"}`,
+    320,
+    y,
+  );
   y += 28;
 
   doc.setFillColor(255, 255, 255);
@@ -138,7 +143,7 @@ export function downloadSessionReport(report: ReportSession): void {
   doc.setFontSize(9);
   doc.setTextColor(MUTED);
   const note = [
-    "Net KPH is productive keypad work (digits, decimal, and +). Tab is desk movement and is not counted.",
+    "Net KPH is productive keypad work (digits, decimal, and + or Enter). Tab is desk movement and is not counted.",
     "Gross KPH includes miskeys, extra keys, and backspaces. Numeric KPH counts only 0–9 and the decimal.",
     "Trailing zeros after the decimal may be omitted (4 for $4.00, 73.7 for $73.70). A leading zero before the decimal may be omitted (.07 for $0.07; .7 is $0.70).",
     "Accuracy is submitted checks that ended up right after any backspaces. Uncorrected errors are wrong submitted amounts only; an unfinished check when time expires is not an error. Corrected accuracy also treats backspaces as errors.",
@@ -213,7 +218,7 @@ export function downloadBestsReport(store: Store): void {
       ["When", "Mode", "Time", "Net KPH", "Accuracy"],
       recent.map((session) => [
         new Date(session.at).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }),
-        session.practice ? "Practice" : "Exam",
+        `${session.practice ? "Practice" : "Exam"} · ${deskNoun(sessionDesk(session))}`,
         goalLabel(session),
         formatKph(session.score.netKph),
         formatPct(session.score.amountAccuracy),
@@ -268,6 +273,7 @@ export function sessionToReport(
     durationMs: session.durationMs,
     stackSize: session.stackSize ?? null,
     practice: session.practice,
+    desk: sessionDesk(session),
     score: session.score,
     sessionId: session.id,
     seed: session.seed,

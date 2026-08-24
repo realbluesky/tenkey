@@ -1,4 +1,12 @@
-export { TenkeySession, isDigitKey, isPlusKey, isSlideKey, isUnslideKey } from "./session";
+export {
+  TenkeySession,
+  isDigitKey,
+  isPlusKey,
+  isEnterKey,
+  isCommitKey,
+  isSlideKey,
+  isUnslideKey,
+} from "./session";
 export {
   formatMoney,
   formatCheckAmount,
@@ -15,12 +23,15 @@ export {
   formatClock,
   formatDuration,
   goalLabel,
+  deskNoun,
+  deskTitle,
   kphBand,
   levenshtein,
 } from "./scoring";
 export type {
   BufferChar,
   CheckItem,
+  DeskKind,
   HandleResult,
   KeyInput,
   Phase,

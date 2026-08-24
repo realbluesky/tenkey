@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupSessionsByDay, median, type StoredSession } from "./storage";
+import { bestsByGoal, goalKey, groupSessionsByDay, median, type Store, type StoredSession } from "./storage";
 import type { Score } from "./engine/types";
 
 function score(kph: number): Score {
@@ -42,6 +42,31 @@ describe("median", () => {
   it("handles odd and even lists", () => {
     expect(median([3, 1, 2])).toBe(2);
     expect(median([1, 2, 3, 4])).toBe(2.5);
+  });
+});
+
+describe("goalKey", () => {
+  it("does not split calculator and spreadsheet desks", () => {
+    const tape = { ...session(1, 9000), practice: false, desk: "calculator" as const };
+    const sheet = { ...session(2, 11000), practice: false, desk: "spreadsheet" as const };
+    expect(goalKey(tape)).toBe(goalKey(sheet));
+    expect(goalKey(tape)).toBe("stack:10");
+  });
+});
+
+describe("bestsByGoal", () => {
+  it("keeps one personal best per length across desks", () => {
+    const store: Store = {
+      name: "Alex",
+      operators: ["Alex"],
+      sessions: [
+        { ...session(1, 9000), practice: false, desk: "calculator" },
+        { ...session(2, 11000), practice: false, desk: "spreadsheet" },
+      ],
+    };
+    const bests = bestsByGoal(store);
+    expect(bests).toHaveLength(1);
+    expect(bests[0]!.score.netKph).toBe(11000);
   });
 });
 

@@ -1,3 +1,5 @@
+export type DeskKind = "calculator" | "spreadsheet";
+
 export type Phase =
   | "armed"
   | "entering"

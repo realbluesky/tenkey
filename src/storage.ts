@@ -1,5 +1,5 @@
 import type { PacePoint } from "./engine/series";
-import type { Score } from "./engine/types";
+import type { DeskKind, Score } from "./engine/types";
 
 export const STORAGE_KEY = "tenkey.v1";
 const MAX_SESSIONS_PER_OPERATOR = 80;
@@ -12,9 +12,14 @@ export type StoredSession = {
   stackSize: number | null;
   seed: number;
   practice: boolean;
+  desk?: DeskKind;
   score: Score;
   pace?: PacePoint[];
 };
+
+export function sessionDesk(session: { desk?: DeskKind | null }): DeskKind {
+  return session.desk === "spreadsheet" ? "spreadsheet" : "calculator";
+}
 
 export type Store = {
   name: string;

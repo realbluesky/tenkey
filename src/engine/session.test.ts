@@ -194,6 +194,72 @@ describe("TenkeySession", () => {
   });
 });
 
+describe("spreadsheet desk", () => {
+  function enter(extras: Partial<KeyInput> = {}): KeyInput {
+    return key("Enter", { code: extras.code ?? "Enter" });
+  }
+
+  it("commits with Enter instead of plus", () => {
+    const session = new TenkeySession({
+      durationMs: 60_000,
+      practice: true,
+      seed: 7,
+      desk: "spreadsheet",
+    });
+    const first = session.current;
+    typeAmount(session, canonicalEntry(first), 0);
+    const plus = session.handleKey(key("+"), 30);
+    expect(plus.submitted).toBeNull();
+    expect(plus.kind).toBe("extra");
+    expect(session.submissions).toHaveLength(0);
+    const committed = session.handleKey(enter(), 31);
+    expect(committed.submitted?.correct).toBe(true);
+    expect(session.phase).toBe("awaiting_slide");
+  });
+
+  it("accepts NumpadEnter and Tab in either order", () => {
+    const session = new TenkeySession({
+      stackSize: 1,
+      practice: true,
+      seed: 3,
+      desk: "spreadsheet",
+    });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    session.handleKey(tab(), 1);
+    expect(session.phase).toBe("awaiting_plus");
+    const done = session.handleKey(enter({ code: "NumpadEnter" }), 2);
+    expect(done.finished).toBe(true);
+    expect(session.submissions).toHaveLength(1);
+  });
+
+  it("counts Enter as a productive plus keystroke", () => {
+    const session = new TenkeySession({
+      durationMs: 3_600_000,
+      practice: true,
+      seed: 8,
+      desk: "spreadsheet",
+    });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    session.handleKey(enter(), 10);
+    session.handleKey(tab(), 11);
+    const score = session.snapshot(3_600_000);
+    expect(session.events.some((event) => event.kind === "plus" && event.key === "Enter")).toBe(
+      true,
+    );
+    expect(score.keystrokes).toBeGreaterThan(1);
+  });
+
+  it("treats Enter as extra on the calculator desk", () => {
+    const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 7 });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    const result = session.handleKey(enter(), 30);
+    expect(result.kind).toBe("extra");
+    expect(session.submissions).toHaveLength(0);
+    const plus = session.handleKey(key("+"), 31);
+    expect(plus.submitted?.correct).toBe(true);
+  });
+});
+
 describe("formatMoney", () => {
   it("groups thousands", () => {
     expect(formatMoney(128450)).toBe("$1,284.50");

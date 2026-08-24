@@ -928,6 +928,174 @@ h1 {
   background: #24382e;
 }
 
+.machine[data-desk="spreadsheet"] [data-desk-ui="calculator"],
+.machine[data-desk="calculator"] [data-desk-ui="spreadsheet"] {
+  display: none !important;
+}
+
+.machine[data-desk="spreadsheet"] {
+  background: linear-gradient(180deg, #d8dcd4, #b7bdb4);
+  color: var(--ink);
+}
+
+.machine[data-desk="spreadsheet"] .soft-keys button {
+  background: #3a4039;
+  color: #e8eee6;
+}
+
+.sheet-house {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid #8f958c;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
+.sheet-chrome {
+  flex: 0 0 auto;
+  background: var(--blotter);
+  color: var(--cream);
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+}
+
+.sheet-bar {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid #c5c9be;
+  min-height: 28px;
+  font-family: var(--mono);
+}
+
+.sheet-ref {
+  width: 42px;
+  display: grid;
+  place-items: center;
+  background: #f3f4ef;
+  border-right: 1px solid #c5c9be;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.sheet-formula {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.sheet-formula .lcd-ghost {
+  color: #b3b8ae;
+}
+
+.sheet-formula .miskey,
+.sheet-grid .miskey {
+  color: var(--bad);
+  text-decoration: underline;
+}
+
+.sheet-formula .cursor,
+.sheet-grid .cursor {
+  background: var(--ink);
+  width: 1px;
+  height: 1em;
+  vertical-align: -0.12em;
+}
+
+.sheet-grid-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sheet-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.82rem;
+}
+
+.sheet-grid th,
+.sheet-grid td {
+  border: 1px solid #d7dbc8;
+}
+
+.sheet-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #eef0ea;
+  font-weight: 500;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  padding: 4px 8px;
+  text-align: center;
+}
+
+.sheet-grid .row-h,
+.sheet-grid td.row-h {
+  width: 28px;
+  text-align: center;
+  background: #eef0ea;
+  color: var(--muted);
+  font-size: 0.68rem;
+  padding: 3px 4px;
+}
+
+.sheet-grid td.cell {
+  padding: 3px 8px;
+  text-align: right;
+  color: var(--ink);
+  min-width: 0;
+}
+
+.sheet-grid tr.is-active td.cell {
+  outline: 2px solid var(--blotter);
+  outline-offset: -2px;
+  background: #e7efe6;
+}
+
+.sheet-grid td.ok {
+  color: var(--ok);
+}
+
+.sheet-grid td.bad {
+  color: var(--bad);
+}
+
+.sheet-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 8px;
+  background: #eef0ea;
+  border-top: 1px solid #c5c9be;
+  font-size: 0.75rem;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.sheet-status span {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.review-machine .sheet-grid-wrap {
+  overflow: auto;
+}
+
 .result-card {
   max-width: 760px;
   margin: 12px auto;

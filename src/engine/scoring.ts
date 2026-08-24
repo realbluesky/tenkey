@@ -159,6 +159,14 @@ export function formatDuration(ms: number): string {
   return minutes === 1 ? "1 minute" : `${minutes} minutes`;
 }
 
+export function deskNoun(desk?: string | null): string {
+  return desk === "spreadsheet" ? "sheet" : "tape";
+}
+
+export function deskTitle(desk?: string | null): string {
+  return desk === "spreadsheet" ? "Spreadsheet" : "Calculator";
+}
+
 export function goalLabel(session: { stackSize?: number | null; durationMs: number }): string {
   if (session.stackSize && session.stackSize > 0) {
     return session.stackSize === 1 ? "1 check" : `${session.stackSize} checks`;

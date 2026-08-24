@@ -8,7 +8,7 @@ Live: [realbluesky.github.io/tenkey](https://realbluesky.github.io/tenkey/)
 
 1. Pick a **stack** (10–100 checks, default) or a **timed** run. A stack ends when you finish the last check; timed runs keep an endless stack until the clock hits zero.
 2. Type the amount from the top check.
-3. Press `+` to add it toward the running total, and `Tab` to slide the check aside — either order.
+3. On a **calculator** desk, press `+` to add it toward the running total. On a **spreadsheet** desk, press `Enter` to commit the cell and work down the column. `Tab` slides the check aside — either order. Calculator and spreadsheet share the same scores.
 4. `Shift+Tab` brings a check back if you slid too soon.
 5. The clock starts on the **first numeric key**.
 

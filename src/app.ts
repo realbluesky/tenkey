@@ -1,5 +1,7 @@
 import {
   amountToWords,
+  deskNoun,
+  deskTitle,
   formatCheckAmount,
   formatClock,
   formatKph,
@@ -12,7 +14,7 @@ import {
 import { buildPace } from "./engine/series";
 import { renderPaceSvg } from "./chart";
 import { VERSION } from "./version";
-import type { CheckItem, KeyInput } from "./engine";
+import type { CheckItem, DeskKind, KeyInput } from "./engine";
 import { downloadBestsReport, downloadSessionReport, sessionToReport } from "./pdf";
 import {
   bestsByGoal,
@@ -22,6 +24,7 @@ import {
   operatorStore,
   personalBest,
   recordSession,
+  sessionDesk,
   sessionsFor,
   type Store,
   type StoredSession,
@@ -70,6 +73,7 @@ class App {
   private lengthKind: "stack" | "time" = "stack";
   private stackSize = 25;
   private durationMs = 60_000;
+  private desk: DeskKind = "calculator";
   private practice = true;
   private session: TenkeySession | null = null;
   private lastStored: StoredSession | null = null;
@@ -111,6 +115,12 @@ class App {
       const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-ms]");
       if (!btn) return;
       this.durationMs = Number(btn.dataset.ms);
+      this.renderPills();
+    });
+    $("#desk-pills").addEventListener("click", (event) => {
+      const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-desk]");
+      if (!btn) return;
+      this.desk = btn.dataset.desk === "spreadsheet" ? "spreadsheet" : "calculator";
       this.renderPills();
     });
     $("#mode-pills").addEventListener("click", (event) => {
@@ -196,7 +206,7 @@ class App {
             });
             return `<tr>
               <td>${when}</td>
-              <td>${session.practice ? "Practice" : "Exam"}</td>
+              <td>${session.practice ? "Practice" : "Exam"} · ${deskNoun(sessionDesk(session))}</td>
               <td>${goalLabel(session)}</td>
               <td>${formatKph(session.score.netKph)}</td>
               <td>${formatPct(session.score.amountAccuracy)}</td>
@@ -300,14 +310,30 @@ class App {
     for (const btn of document.querySelectorAll<HTMLElement>("#duration-pills [data-ms]")) {
       btn.classList.toggle("is-on", Number(btn.dataset.ms) === this.durationMs);
     }
+    for (const btn of document.querySelectorAll<HTMLElement>("#desk-pills [data-desk]")) {
+      btn.classList.toggle("is-on", btn.dataset.desk === this.desk);
+    }
     for (const btn of document.querySelectorAll<HTMLElement>("#mode-pills [data-mode]")) {
       const isPractice = btn.dataset.mode === "practice";
       btn.classList.toggle("is-on", isPractice === this.practice);
     }
     $("#stack-field").hidden = this.lengthKind !== "stack";
     $("#duration-field").hidden = this.lengthKind !== "time";
+    $("#desk-calc-note").hidden = this.desk !== "calculator";
+    $("#desk-sheet-note").hidden = this.desk !== "spreadsheet";
     $("#mode-practice-note").hidden = !this.practice;
     $("#mode-exam-note").hidden = this.practice;
+    this.renderDeskCopy();
+  }
+
+  private renderDeskCopy(): void {
+    const sheet = this.desk === "spreadsheet";
+    $("#lede").innerHTML = sheet
+      ? `Type each amount. <kbd>Enter</kbd> commits the cell and you work down the column. <kbd>Tab</kbd> slides the check — either order. <kbd>Shift</kbd>+<kbd>Tab</kbd> brings a premature slide back. The clock starts on your first digit. Speed is Keystrokes per Hour (KPH).`
+      : `Type each amount. <kbd>+</kbd> and <kbd>Tab</kbd> can happen in either order — add, then slide, or start sliding before you hit add. <kbd>Shift</kbd>+<kbd>Tab</kbd> brings a premature slide back. The clock starts on your first digit. Speed is Keystrokes per Hour (KPH).`;
+    $("#howto-commit").innerHTML = sheet
+      ? `Press <kbd>Enter</kbd> to commit the cell, and <kbd>Tab</kbd> to slide — either order.`
+      : `Press <kbd>+</kbd> to add toward the total, and <kbd>Tab</kbd> to slide — either order.`;
   }
 
   private start(seed?: number): void {
@@ -324,8 +350,10 @@ class App {
       durationMs: this.lengthKind === "time" ? this.durationMs : 0,
       stackSize: this.lengthKind === "stack" ? this.stackSize : null,
       practice: this.practice,
+      desk: this.desk,
       seed,
     });
+    this.applyDeskUi($("#live-machine"), this.desk);
     this.lastStored = null;
     this.tapePrinted = 0;
     this.front = $("#check-front");
@@ -365,7 +393,7 @@ class App {
     if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
 
     const input = keyFromEvent(event);
-    if (event.repeat && (input.key === "Tab" || input.key === "+")) {
+    if (event.repeat && (input.key === "Tab" || input.key === "+" || input.key === "Enter")) {
       event.preventDefault();
       return;
     }
@@ -389,7 +417,7 @@ class App {
     if (result.unslid) this.playUnslide();
     else if (result.slid) this.playSlide(result.recycle);
     else if (result.recycle) this.finishSlideSwap();
-    this.renderTape();
+    this.renderOutput();
     this.renderEntry();
     this.renderHint();
     this.renderPeeks();
@@ -481,6 +509,7 @@ class App {
       stackSize: this.session.stackSize,
       seed: this.session.seed,
       practice: this.session.practice,
+      desk: this.session.desk,
       score,
       pace,
     };
@@ -490,11 +519,34 @@ class App {
   }
 
   private renderTest(updateCheck: boolean): void {
+    if (!this.session) return;
+    this.applyDeskUi($("#live-machine"), this.session.desk);
     if (updateCheck) this.renderChecks();
-    this.renderTape();
+    this.renderOutput();
     this.renderEntry();
     this.renderHint();
     this.renderLive(performance.now());
+  }
+
+  private applyDeskUi(root: HTMLElement, desk: DeskKind): void {
+    root.dataset.desk = desk;
+    const plus = root.querySelector<HTMLButtonElement>(".soft-keys .plus");
+    if (!plus) return;
+    if (desk === "spreadsheet") {
+      plus.dataset.key = "Enter";
+      plus.dataset.code = "NumpadEnter";
+      plus.textContent = "↵";
+    } else {
+      plus.dataset.key = "+";
+      plus.dataset.code = "";
+      plus.textContent = "+";
+    }
+  }
+
+  private renderOutput(): void {
+    if (!this.session) return;
+    if (this.session.desk === "spreadsheet") this.renderSheet();
+    else this.renderTape();
   }
 
   private renderChecks(): void {
@@ -563,6 +615,36 @@ class App {
     while (tape.childElementCount > 28) tape.firstElementChild?.remove();
   }
 
+  private renderSheet(): void {
+    if (!this.session) return;
+    const session = this.session;
+    const body = $("#sheet-body");
+    const activeIndex = session.submissions.length;
+    const rows = sheetRowCount(session);
+    const parts: string[] = [];
+    for (let i = 0; i < rows; i++) {
+      const sub = session.submissions[i];
+      const isActive =
+        i === activeIndex && session.phase !== "done" && session.phase !== "aborted";
+      let cell = "";
+      let cls = "cell";
+      if (sub) {
+        cell = escapeHtml(sub.parsedCents != null ? formatCheckAmount(sub.parsedCents) : sub.raw);
+        if (session.practice) cls += sub.correct ? " ok" : " bad";
+      } else if (isActive) {
+        cell = liveEntryHtml(session, false);
+      }
+      parts.push(
+        `<tr class="${isActive ? "is-active" : ""}"><th class="row-h">${i + 1}</th><td class="${cls}">${cell}</td></tr>`,
+      );
+    }
+    body.innerHTML = parts.join("");
+    $("#sheet-ref").textContent = `A${activeIndex + 1}`;
+    $("#sheet-formula").innerHTML = liveEntryHtml(session, false);
+    $("#sheet-sum").textContent = formatMoney(session.snapshot(performance.now()).enteredTotalCents);
+    body.querySelector("tr.is-active")?.scrollIntoView({ block: "nearest" });
+  }
+
   private renderEntry(): void {
     if (!this.session) return;
     const lcd = $("#lcd-entry");
@@ -585,6 +667,7 @@ class App {
   private renderHint(): void {
     if (!this.session) return;
     const hint = $("#hint");
+    const commit = this.session.desk === "spreadsheet" ? "Enter" : "+";
     const last =
       this.session.stackSize != null &&
       this.session.hasCurrentCheck &&
@@ -598,14 +681,14 @@ class App {
     } else if (this.session.phase === "awaiting_plus") {
       hint.textContent =
         this.session.stackSize != null && this.session.entryIndex === this.session.stackSize - 1
-          ? "+ to add the last check and finish. Shift+Tab brings it back."
-          : "+ to add. Shift+Tab brings the check back.";
+          ? `${commit} to add the last check and finish. Shift+Tab brings it back.`
+          : `${commit} to add. Shift+Tab brings the check back.`;
     } else if (this.session.buffer.length === 0) {
-      hint.textContent = "Enter the amount, then + or Tab.";
+      hint.textContent = `Enter the amount, then ${commit} or Tab.`;
     } else if (this.session.buffer.some((ch) => ch.miskey)) {
-      hint.textContent = "Backspace the red keys, then +.";
+      hint.textContent = `Backspace the red keys, then ${commit}.`;
     } else {
-      hint.textContent = "+ to add, or Tab to slide first.";
+      hint.textContent = `${commit} to add, or Tab to slide first.`;
     }
     const current = this.session.checks[this.session.currentIndex];
     this.front?.classList.toggle("is-whole", Boolean(current?.wholeDollar));
@@ -641,7 +724,7 @@ class App {
     $("#res-kph").textContent = formatKph(score.netKph);
     $("#res-acc").textContent = formatPct(score.amountAccuracy);
     $("#res-band").textContent = kphBand(score.netKph);
-    $("#res-mode").textContent = `${stored.practice ? "Practice" : "Exam"} · ${goalLabel(stored)}`;
+    $("#res-mode").textContent = `${stored.practice ? "Practice" : "Exam"} · ${goalLabel(stored)} · ${deskTitle(sessionDesk(stored))}`;
     $("#res-gross").textContent = formatKph(score.grossKph);
     $("#res-numeric").textContent = formatKph(score.numericKph);
     $("#res-corr-acc").textContent = formatPct(score.correctedAccuracy);
@@ -692,7 +775,15 @@ class App {
     } else {
       pb.hidden = true;
     }
-    this.renderReviewTape();
+    this.renderReviewOutput();
+  }
+
+  private renderReviewOutput(): void {
+    const session = this.session;
+    if (!session) return;
+    this.applyDeskUi($("#review-machine"), session.desk);
+    if (session.desk === "spreadsheet") this.renderReviewSheet();
+    else this.renderReviewTape();
   }
 
   private renderReviewTape(): void {
@@ -717,6 +808,30 @@ class App {
     tape.scrollTop = tape.scrollHeight;
   }
 
+  private renderReviewSheet(): void {
+    const session = this.session;
+    if (!session) return;
+    const body = $("#review-sheet-body");
+    const subs = session.submissions;
+    if (subs.length === 0) {
+      body.innerHTML = `<tr><th class="row-h">1</th><td class="cell"></td></tr>`;
+    } else {
+      body.innerHTML = subs
+        .map((sub, i) => {
+          const amount = escapeHtml(
+            sub.parsedCents != null ? formatCheckAmount(sub.parsedCents) : sub.raw,
+          );
+          const cls = sub.correct ? "ok" : "bad";
+          return `<tr><th class="row-h">${i + 1}</th><td class="cell ${cls}">${amount}</td></tr>`;
+        })
+        .join("");
+    }
+    $("#review-sheet-sum").textContent = formatMoney(
+      session.snapshot(session.endedAt ?? performance.now()).enteredTotalCents,
+    );
+    body.lastElementChild?.scrollIntoView({ block: "nearest" });
+  }
+
   private pdfSession(): void {
     if (!this.lastStored) return;
     const name = this.store.name.trim();
@@ -735,6 +850,25 @@ class App {
       this.timer = null;
     }
   }
+}
+
+function sheetRowCount(session: TenkeySession): number {
+  if (session.stackSize != null) return Math.max(session.stackSize, session.submissions.length);
+  return Math.max(16, session.submissions.length + 6);
+}
+
+function liveEntryHtml(session: TenkeySession, ghost: boolean): string {
+  if (session.phase === "awaiting_slide" || session.buffer.length === 0) {
+    return ghost
+      ? `<span class="lcd-ghost">0.00</span><span class="cursor"></span>`
+      : `<span class="cursor"></span>`;
+  }
+  const chars = session.buffer
+    .map((ch) =>
+      ch.miskey ? `<span class="miskey">${escapeHtml(ch.ch)}</span>` : escapeHtml(ch.ch),
+    )
+    .join("");
+  return `${chars}<span class="cursor"></span>`;
 }
 
 function sameDay(a: number, b: number): boolean {
