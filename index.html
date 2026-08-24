@@ -15,8 +15,8 @@
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600&family=Fraunces:opsz,wght@9..144,560;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Patrick+Hand&display=swap"
       rel="stylesheet"
     />
-    <script type="module" crossorigin src="./assets/index-0leVj-w1.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-kca_omiq.css">
+    <script type="module" crossorigin src="./assets/index-BvTNwdRy.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BlZg2bsH.css">
   </head>
   <body>
     <div class="desk">
@@ -45,7 +45,7 @@
           <div class="ticket">
             <p class="kicker">Station 4 · Check processing</p>
             <h1>Add the stack. Slide the check.</h1>
-            <p class="lede">
+            <p class="lede" id="lede">
               Type each amount. <kbd>+</kbd> and <kbd>Tab</kbd> can happen in
               either order — add, then slide, or start sliding before you hit
               add. <kbd>Shift</kbd>+<kbd>Tab</kbd> brings a premature slide
@@ -97,13 +97,27 @@
             </div>
 
             <div class="field">
+              <span>Desk</span>
+              <div id="desk-pills" class="pills">
+                <button type="button" data-desk="calculator" class="is-on">Calculator</button>
+                <button type="button" data-desk="spreadsheet">Spreadsheet</button>
+              </div>
+              <p class="fine" id="desk-calc-note">
+                <kbd>+</kbd> adds toward the total. The tape spools up on the right.
+              </p>
+              <p class="fine" id="desk-sheet-note" hidden>
+                <kbd>Enter</kbd> commits the cell and you work down the column. Tab still slides the check.
+              </p>
+            </div>
+
+            <div class="field">
               <span>Mode</span>
               <div id="mode-pills" class="pills">
                 <button type="button" data-mode="practice" class="is-on">Practice</button>
                 <button type="button" data-mode="exam">Exam</button>
               </div>
               <p class="fine" id="mode-practice-note">
-                Marks each amount right or wrong on the tape as you go.
+                Marks each amount right or wrong as you go.
               </p>
               <p class="fine" id="mode-exam-note" hidden>
                 Hides right and wrong until you finish. Exam scores are the official personal bests.
@@ -115,7 +129,7 @@
               <ol class="howto">
                 <li>Read the amount in the box on the top check.</li>
                 <li>Enter it on the 10-key. You may skip trailing zeros after the decimal (<code>4</code> for $4.00, <code>73.7</code> for $73.70) and a leading zero before it (<code>.07</code> for $0.07 — not <code>.7</code>, that is $0.70).</li>
-                <li>Press <kbd>+</kbd> to add toward the total, and <kbd>Tab</kbd> to slide — either order.</li>
+                <li id="howto-commit">Press <kbd>+</kbd> to add toward the total, and <kbd>Tab</kbd> to slide — either order.</li>
                 <li><kbd>Shift</kbd>+<kbd>Tab</kbd> pulls the last check back if you Tabbed too soon.</li>
                 <li>Alpha and stray keys show on the display and must be corrected.</li>
               </ol>
@@ -190,8 +204,8 @@
             <p class="hint" id="hint"></p>
           </div>
 
-          <aside class="machine">
-            <div class="tape-house">
+          <aside class="machine" id="live-machine" data-desk="calculator">
+            <div class="tape-house" data-desk-ui="calculator">
               <div class="tape-slot" aria-hidden="true"></div>
               <div class="tape-viewport">
                 <div id="tape" class="tape">
@@ -200,7 +214,29 @@
               </div>
               <div class="tape-print" aria-hidden="true"></div>
             </div>
-            <div class="lcd">
+            <div class="sheet-house" data-desk-ui="spreadsheet">
+              <div class="sheet-chrome"><span>Sheet1</span></div>
+              <div class="sheet-bar">
+                <span class="sheet-ref" id="sheet-ref">A1</span>
+                <div class="sheet-formula" id="sheet-formula"></div>
+              </div>
+              <div class="sheet-grid-wrap">
+                <table class="sheet-grid" id="sheet">
+                  <thead>
+                    <tr>
+                      <th class="row-h"></th>
+                      <th>A</th>
+                    </tr>
+                  </thead>
+                  <tbody id="sheet-body"></tbody>
+                </table>
+              </div>
+              <div class="sheet-status">
+                <span>SUM</span>
+                <strong id="sheet-sum">$0.00</strong>
+              </div>
+            </div>
+            <div class="lcd" data-desk-ui="calculator">
               <div class="lcd-label">total</div>
               <div id="lcd-total" class="lcd-total">$0.00</div>
               <div class="lcd-label">entry</div>
@@ -267,15 +303,33 @@
               <button id="home-btn" class="ghost" type="button">Home</button>
             </div>
           </div>
-          <aside class="machine review-machine" id="review-machine">
-            <div class="tape-house">
+          <aside class="machine review-machine" id="review-machine" data-desk="calculator">
+            <div class="tape-house" data-desk-ui="calculator">
               <div class="tape-slot" aria-hidden="true"></div>
               <div class="tape-viewport">
                 <div id="review-tape" class="tape"></div>
               </div>
               <div class="tape-print" aria-hidden="true"></div>
             </div>
-            <div class="lcd">
+            <div class="sheet-house" data-desk-ui="spreadsheet">
+              <div class="sheet-chrome"><span>Sheet1</span></div>
+              <div class="sheet-grid-wrap">
+                <table class="sheet-grid" id="review-sheet">
+                  <thead>
+                    <tr>
+                      <th class="row-h"></th>
+                      <th>A</th>
+                    </tr>
+                  </thead>
+                  <tbody id="review-sheet-body"></tbody>
+                </table>
+              </div>
+              <div class="sheet-status">
+                <span>SUM</span>
+                <strong id="review-sheet-sum">$0.00</strong>
+              </div>
+            </div>
+            <div class="lcd" data-desk-ui="calculator">
               <div class="lcd-label">total</div>
               <div id="review-total" class="lcd-total">$0.00</div>
               <div class="lcd-label">review</div>
