@@ -306,6 +306,8 @@ class App {
     }
     $("#stack-field").hidden = this.lengthKind !== "stack";
     $("#duration-field").hidden = this.lengthKind !== "time";
+    $("#mode-practice-note").hidden = !this.practice;
+    $("#mode-exam-note").hidden = this.practice;
   }
 
   private start(seed?: number): void {
