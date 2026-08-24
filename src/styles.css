@@ -382,6 +382,10 @@ h1 {
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
 }
 
+.peek {
+  z-index: 1;
+}
+
 .peek.p1 {
   transform: translate(10px, 8px) rotate(1.4deg);
 }
@@ -415,15 +419,25 @@ h1 {
   transition: transform 0.28s ease, opacity 0.28s ease;
 }
 
+.check.is-waiting {
+  z-index: 2;
+  pointer-events: none;
+}
+
+.check.is-current {
+  z-index: 3;
+}
+
 .check.is-leaving {
+  z-index: 4;
   transform: translateX(-130%) rotate(-12deg);
   opacity: 0;
 }
 
-.check.is-arriving {
-  transform: translateY(10px);
-  opacity: 0;
+.check.is-settling {
   transition: none;
+  opacity: 1;
+  transform: none;
 }
 
 .check header {

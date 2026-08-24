@@ -59,6 +59,9 @@ class App {
   private lastStored: StoredSession | null = null;
   private timer: number | null = null;
   private slideTimer: number | null = null;
+  private front: HTMLElement | null = null;
+  private waiting: HTMLElement | null = null;
+  private pendingLeave: HTMLElement | null = null;
 
   mount(): void {
     this.bind();
@@ -177,7 +180,15 @@ class App {
       seed,
     });
     this.lastStored = null;
+    this.front = $("#check-front");
+    this.waiting = $("#check-back");
+    this.pendingLeave = null;
+    if (this.slideTimer != null) {
+      window.clearTimeout(this.slideTimer);
+      this.slideTimer = null;
+    }
     this.show("test");
+    (document.activeElement as HTMLElement | null)?.blur();
     this.timer = window.setInterval(() => this.pulse(), 100);
   }
 
@@ -186,6 +197,7 @@ class App {
     if (!window.confirm("Abort this test without saving?")) return;
     this.session.abort(performance.now());
     this.stopTimer();
+    this.finishSlideSwap();
     this.show("setup");
   }
 
@@ -205,7 +217,7 @@ class App {
     if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
 
     const input = keyFromEvent(event);
-    if (event.repeat && (input.key === " " || input.key === "+" || input.key === "Control")) {
+    if (event.repeat && (input.key === "Tab" || input.key === "+")) {
       event.preventDefault();
       return;
     }
@@ -234,18 +246,33 @@ class App {
   }
 
   private playSlide(): void {
-    const check = $("#check");
-    check.classList.remove("is-arriving");
-    check.classList.add("is-leaving");
-    if (this.slideTimer != null) window.clearTimeout(this.slideTimer);
-    this.slideTimer = window.setTimeout(() => {
-      check.classList.remove("is-leaving");
-      this.renderCheck();
-      check.classList.add("is-arriving");
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => check.classList.remove("is-arriving"));
-      });
-    }, 280);
+    if (!this.front || !this.waiting) return;
+    this.finishSlideSwap();
+    const leaving = this.front;
+    const revealed = this.waiting;
+    leaving.classList.add("is-leaving");
+    revealed.classList.remove("is-waiting");
+    revealed.classList.add("is-current");
+    this.front = revealed;
+    this.pendingLeave = leaving;
+    this.slideTimer = window.setTimeout(() => this.finishSlideSwap(), 280);
+  }
+
+  private finishSlideSwap(): void {
+    if (this.slideTimer != null) {
+      window.clearTimeout(this.slideTimer);
+      this.slideTimer = null;
+    }
+    const leaving = this.pendingLeave;
+    if (!leaving || !this.session) return;
+    this.pendingLeave = null;
+    leaving.classList.add("is-settling");
+    leaving.classList.remove("is-leaving", "is-current");
+    leaving.classList.add("is-waiting");
+    const next = this.session.checks[this.session.currentIndex + 1];
+    if (next) fillCheck(leaving, next);
+    this.waiting = leaving;
+    window.requestAnimationFrame(() => leaving.classList.remove("is-settling"));
   }
 
   endForPreview(): void {
@@ -257,6 +284,7 @@ class App {
   private complete(): void {
     if (!this.session) return;
     this.stopTimer();
+    this.finishSlideSwap();
     const now = this.session.endedAt ?? performance.now();
     const score = this.session.snapshot(now);
     const stored: StoredSession = {
@@ -274,27 +302,22 @@ class App {
   }
 
   private renderTest(updateCheck: boolean): void {
-    if (updateCheck) this.renderCheck();
+    if (updateCheck) this.renderChecks();
     this.renderTape();
     this.renderEntry();
     this.renderHint();
     this.renderLive(performance.now());
   }
 
-  private renderCheck(): void {
-    if (!this.session) return;
-    const check = this.session.current;
-    $("#check-no").textContent = String(check.checkNumber);
-    $("#check-payee").textContent = check.payee;
-    $("#check-amount").textContent = formatCheckAmount(check.cents);
-    $("#check-words").textContent = `${amountToWords(check.cents)} Dollars`;
-    $("#check-memo").textContent = check.memo;
-    $("#check-micr").textContent = micr(check);
-    $("#check").classList.toggle("is-whole", check.wholeDollar);
-    const box = $("#amount-box");
-    box.dataset.hand = check.amountHand;
-    box.dataset.size = check.amountSize;
-    box.style.setProperty("--amount-tilt", String(check.amountTilt));
+  private renderChecks(): void {
+    if (!this.session || !this.front || !this.waiting) return;
+    this.front.classList.remove("is-leaving", "is-settling", "is-waiting");
+    this.front.classList.add("is-current");
+    this.waiting.classList.remove("is-leaving", "is-settling", "is-current");
+    this.waiting.classList.add("is-waiting");
+    fillCheck(this.front, this.session.current);
+    const next = this.session.checks[this.session.currentIndex + 1];
+    if (next) fillCheck(this.waiting, next);
   }
 
   private renderTape(): void {
@@ -335,15 +358,15 @@ class App {
     if (this.session.phase === "armed") {
       hint.textContent = "First digit starts the clock.";
     } else if (this.session.phase === "awaiting_slide") {
-      hint.textContent = "Space or Left Ctrl — slide this check aside.";
+      hint.textContent = "Tab — slide this check aside.";
     } else if (this.session.buffer.length === 0) {
       hint.textContent = "Enter the amount, then press +.";
     } else if (this.session.buffer.some((ch) => ch.miskey)) {
       hint.textContent = "Backspace the red keys, then +.";
     } else {
-      hint.textContent = "Press + to add, then slide the check.";
+      hint.textContent = "Press + to add, then Tab.";
     }
-    $("#check").dataset.phase = this.session.phase;
+    this.front?.classList.toggle("is-whole", this.session.current.wholeDollar);
   }
 
   private renderLive(now: number): void {
@@ -426,6 +449,20 @@ class App {
 
 function durationName(ms: number): string {
   return DURATIONS.find((d) => d.ms === ms)?.name ?? formatClock(ms);
+}
+
+function fillCheck(root: HTMLElement, check: CheckItem): void {
+  root.querySelector(".check-no")!.textContent = String(check.checkNumber);
+  root.querySelector(".check-payee")!.textContent = check.payee;
+  root.querySelector(".check-amount")!.textContent = formatCheckAmount(check.cents);
+  root.querySelector(".check-words")!.textContent = `${amountToWords(check.cents)} Dollars`;
+  root.querySelector(".check-memo")!.textContent = check.memo;
+  root.querySelector(".check-micr")!.textContent = micr(check);
+  root.classList.toggle("is-whole", check.wholeDollar);
+  const box = root.querySelector<HTMLElement>(".amount-box")!;
+  box.dataset.hand = check.amountHand;
+  box.dataset.size = check.amountSize;
+  box.style.setProperty("--amount-tilt", String(check.amountTilt));
 }
 
 function micr(check: CheckItem): string {

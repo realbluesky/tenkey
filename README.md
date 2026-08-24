@@ -9,7 +9,7 @@ Live: [realbluesky.github.io/tenkey](https://realbluesky.github.io/tenkey/)
 1. Pick a duration. The stack of checks is endless for that window.
 2. Type the amount from the top check.
 3. Press `+` to add it toward the running total.
-4. Press `Space` or `Left Ctrl` to slide the check aside (desk simulation).
+4. Press `Tab` to slide the check aside (desk simulation).
 5. The clock starts on the **first numeric key**.
 
 Whole-dollar amounts (~30% of the stack) may skip `.00` with no penalty. Other amounts require pennies. Alpha keys and other stray hits appear on the display and must be backspaced or they count against accuracy.

@@ -18,7 +18,7 @@ function typeAmount(session: TenkeySession, raw: string, now: number): void {
 function runCheck(session: TenkeySession, raw: string, now: number): void {
   typeAmount(session, raw, now);
   session.handleKey(key("+"), now);
-  session.handleKey(key(" "), now);
+  session.handleKey(key("Tab", { code: "Tab" }), now);
 }
 
 describe("TenkeySession", () => {
@@ -26,7 +26,7 @@ describe("TenkeySession", () => {
     const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 1 });
     session.handleKey(key("a"), 1000);
     session.handleKey(key("+"), 1001);
-    session.handleKey(key(" "), 1002);
+    session.handleKey(key("Tab", { code: "Tab" }), 1002);
     expect(session.phase).toBe("armed");
     expect(session.startedAt).toBeNull();
     const result = session.handleKey(key("4"), 1500);
@@ -40,34 +40,29 @@ describe("TenkeySession", () => {
     const expected = canonicalEntry(session.current);
     session.handleKey(key(expected[0]!), 0);
     typeAmount(session, expected.slice(1), 10);
-    const earlySlide = session.handleKey(key(" "), 20);
+    const earlySlide = session.handleKey(key("Tab", { code: "Tab" }), 20);
     expect(earlySlide.kind).toBe("extra");
     expect(session.currentIndex).toBe(0);
     const plus = session.handleKey(key("+"), 30);
     expect(plus.submitted?.correct).toBe(true);
     expect(session.phase).toBe("awaiting_slide");
-    const slide = session.handleKey(key(" "), 40);
+    const slide = session.handleKey(key("Tab", { code: "Tab" }), 40);
     expect(slide.slid).toBe(true);
     expect(session.currentIndex).toBe(1);
   });
 
-  it("accepts left control as slide after plus", () => {
+  it("slides on Tab after plus, not Space or Control", () => {
     const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 3 });
     const expected = canonicalEntry(session.current);
     typeAmount(session, expected, 0);
     session.handleKey(key("+"), 1);
-    const slide = session.handleKey(key("Control", { code: "ControlLeft", location: 1 }), 2);
-    expect(slide.slid).toBe(true);
-  });
-
-  it("does not treat right control as slide", () => {
-    const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 3 });
-    const expected = canonicalEntry(session.current);
-    typeAmount(session, expected, 0);
-    session.handleKey(key("+"), 1);
-    const result = session.handleKey(key("Control", { code: "ControlRight", location: 2 }), 2);
-    expect(result.slid).toBe(false);
+    expect(session.handleKey(key(" "), 2).slid).toBe(false);
+    expect(session.handleKey(key("Control", { code: "ControlLeft", location: 1 }), 3).slid).toBe(
+      false,
+    );
     expect(session.phase).toBe("awaiting_slide");
+    const slide = session.handleKey(key("Tab", { code: "Tab" }), 4);
+    expect(slide.slid).toBe(true);
   });
 
   it("shows miskeys and requires they be corrected", () => {
@@ -128,7 +123,7 @@ describe("TenkeySession", () => {
     const first = session.current;
     typeAmount(session, "999.99", 0);
     session.handleKey(key("+"), 1);
-    session.handleKey(key(" "), 2);
+    session.handleKey(key("Tab", { code: "Tab" }), 2);
     const score = session.snapshot(3);
     expect(score.enteredTotalCents).toBe(99999);
     expect(score.trueTotalCents).toBe(first.cents);

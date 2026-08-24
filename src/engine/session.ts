@@ -35,12 +35,7 @@ export function isPlusKey(input: KeyInput): boolean {
 }
 
 export function isSlideKey(input: KeyInput): boolean {
-  return (
-    input.key === " " ||
-    input.code === "Space" ||
-    input.code === "ControlLeft" ||
-    (input.key === "Control" && input.location === 1)
-  );
+  return input.key === "Tab" || input.code === "Tab";
 }
 
 export function isBackspaceKey(input: KeyInput): boolean {
