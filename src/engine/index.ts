@@ -18,6 +18,7 @@ export {
 export { amountToWords } from "./words";
 export {
   computeScore,
+  committedNetFromEvents,
   formatKph,
   formatPct,
   formatClock,

@@ -1,7 +1,66 @@
 import { acceptableStrings } from "./amounts";
-import type { Phase, Score, Submission } from "./types";
-import type { Keystroke } from "./types";
-import type { BufferChar } from "./types";
+import type { BufferChar, Keystroke, Phase, Score, Submission } from "./types";
+
+const MAX_PENDING_NET_CHARS = 8;
+
+export function numericCharCount(raw: string): number {
+  let n = 0;
+  for (const ch of raw) {
+    if (ch === "." || (ch >= "0" && ch <= "9")) n += 1;
+  }
+  return n;
+}
+
+export function committedNumericChars(sub: Submission): number {
+  const n = numericCharCount(sub.raw);
+  if (!sub.correct) return n;
+  let max = 0;
+  for (const form of acceptableStrings(sub.check)) max = Math.max(max, form.length);
+  return Math.min(n, max);
+}
+
+export function pendingNumericChars(buffer: BufferChar[], include: boolean): number {
+  if (!include) return 0;
+  let n = 0;
+  for (const ch of buffer) {
+    if (!ch.miskey && (ch.ch === "." || (ch.ch >= "0" && ch.ch <= "9"))) n += 1;
+  }
+  return Math.min(n, MAX_PENDING_NET_CHARS);
+}
+
+/** Digits/decimals still in committed fields, plus each +/Enter. Backspaced keys drop out. */
+export function committedNetFromEvents(
+  events: Keystroke[],
+  upToMs = Number.POSITIVE_INFINITY,
+): number {
+  const buffer: Array<"numeric" | "other"> = [];
+  let committed = 0;
+  for (const event of events) {
+    if (event.atMs > upToMs) break;
+    switch (event.kind) {
+      case "digit":
+      case "decimal":
+        buffer.push("numeric");
+        break;
+      case "miskey":
+        buffer.push("other");
+        break;
+      case "backspace":
+        buffer.pop();
+        break;
+      case "plus": {
+        let numeric = 0;
+        for (const item of buffer) if (item === "numeric") numeric += 1;
+        committed += numeric + 1;
+        buffer.length = 0;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return committed;
+}
 
 export function levenshtein(a: string, b: string): number {
   const rows = a.length + 1;
@@ -51,9 +110,11 @@ export function computeScore(input: {
     (event) => event.kind !== "ignored" && !isDeskKind(event.kind),
   );
   const keystrokes = counted.length;
-  const numericKeystrokes = counted.filter(
-    (event) => event.kind === "digit" || event.kind === "decimal",
-  ).length;
+  const includePending = input.phase !== "done" && input.phase !== "aborted";
+  const numericKeystrokes =
+    input.submissions.reduce((sum, sub) => sum + committedNumericChars(sub), 0) +
+    pendingNumericChars(input.buffer, includePending);
+  const netKeys = numericKeystrokes + input.submissions.length;
   const correctedErrors = counted.filter((event) => event.kind === "backspace").length;
   const leftoverRaw = input.buffer.map((ch) => ch.ch).join("");
 
@@ -66,10 +127,8 @@ export function computeScore(input: {
   const checksCorrect = input.submissions.filter((sub) => sub.correct).length;
   const uncorrectedErrors = checksSubmitted - checksCorrect;
 
-  const errorKeys = counted.filter((event) => isKphErrorKind(event.kind)).length;
-
   const grossKph = hours > 0 ? keystrokes / hours : 0;
-  const netKph = hours > 0 ? Math.max(0, keystrokes - errorKeys) / hours : 0;
+  const netKph = hours > 0 ? netKeys / hours : 0;
   const numericKph = hours > 0 ? numericKeystrokes / hours : 0;
 
   const expectedChars = input.submissions.reduce((sum, sub) => {

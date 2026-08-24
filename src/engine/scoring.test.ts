@@ -138,7 +138,7 @@ describe("computeScore", () => {
     expect(Math.round(score.grossKph)).toBe(10000);
   });
 
-  it("excludes Tab/slide from all KPH rates", () => {
+  it("excludes Tab/slide from gross KPH", () => {
     const score = computeScore(
       {
         startedAt: 0,
@@ -165,7 +165,104 @@ describe("computeScore", () => {
       3_600_000,
     );
     expect(Math.round(score.grossKph)).toBe(8000);
-    expect(Math.round(score.netKph)).toBe(8000);
-    expect(Math.round(score.numericKph)).toBe(8000);
+    expect(Math.round(score.netKph)).toBe(0);
+    expect(Math.round(score.numericKph)).toBe(0);
+  });
+
+  it("does not count backspaced mash toward net or numeric KPH", () => {
+    const sub: Submission = {
+      check,
+      raw: "127.45",
+      parsedCents: 12745,
+      correct: true,
+      atMs: 10,
+    };
+    const mash = Array.from({ length: 400 }, (_, i) => ({
+      atMs: 20 + i,
+      key: i % 2 === 0 ? "9" : "Backspace",
+      code: "",
+      kind: i % 2 === 0 ? ("digit" as const) : ("backspace" as const),
+    }));
+    const score = computeScore(
+      {
+        startedAt: 0,
+        endedAt: 3_600_000,
+        durationMs: 3_600_000,
+        events: [
+          { atMs: 1, key: "1", code: "", kind: "digit" },
+          { atMs: 2, key: "2", code: "", kind: "digit" },
+          { atMs: 3, key: "7", code: "", kind: "digit" },
+          { atMs: 4, key: ".", code: "", kind: "decimal" },
+          { atMs: 5, key: "4", code: "", kind: "digit" },
+          { atMs: 6, key: "5", code: "", kind: "digit" },
+          { atMs: 7, key: "+", code: "", kind: "plus" },
+          ...mash,
+        ],
+        submissions: [sub],
+        buffer: [],
+        phase: "done",
+      },
+      3_600_000,
+    );
+    expect(score.numericKeystrokes).toBe(6);
+    expect(Math.round(score.numericKph)).toBe(6);
+    expect(Math.round(score.netKph)).toBe(7);
+    expect(score.grossKph).toBeGreaterThan(score.netKph);
+    expect(score.correctedErrors).toBe(200);
+  });
+
+  it("caps padded correct amounts at a legal spelling", () => {
+    const sub: Submission = {
+      check,
+      raw: "0000127.45",
+      parsedCents: 12745,
+      correct: true,
+      atMs: 10,
+    };
+    const score = computeScore(
+      {
+        startedAt: 0,
+        endedAt: 3_600_000,
+        durationMs: 3_600_000,
+        events: [],
+        submissions: [sub],
+        buffer: [],
+        phase: "done",
+      },
+      3_600_000,
+    );
+    expect(score.numericKeystrokes).toBe(6);
+    expect(Math.round(score.netKph)).toBe(7);
+  });
+
+  it("does not count leftover unfinished keys toward net KPH", () => {
+    const sub: Submission = {
+      check,
+      raw: "127.45",
+      parsedCents: 12745,
+      correct: true,
+      atMs: 10,
+    };
+    const score = computeScore(
+      {
+        startedAt: 0,
+        endedAt: 3_600_000,
+        durationMs: 3_600_000,
+        events: [
+          { atMs: 1, key: "1", code: "", kind: "digit" },
+          { atMs: 7, key: "+", code: "", kind: "plus" },
+        ],
+        submissions: [sub],
+        buffer: [
+          { ch: "9", miskey: false },
+          { ch: "9", miskey: false },
+          { ch: "9", miskey: false },
+        ],
+        phase: "done",
+      },
+      3_600_000,
+    );
+    expect(score.leftoverRaw).toBe("999");
+    expect(Math.round(score.netKph)).toBe(7);
   });
 });

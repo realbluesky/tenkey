@@ -155,6 +155,30 @@ describe("TenkeySession", () => {
     expect(score.keystrokes).toBeGreaterThan(3);
   });
 
+  it("does not let backspaced mash inflate net KPH on the last check", () => {
+    const clean = new TenkeySession({ stackSize: 2, practice: true, seed: 9 });
+    runCheck(clean, canonicalEntry(clean.current), 0);
+    runCheck(clean, canonicalEntry(clean.current), 50);
+    clean.finish(10_000);
+
+    const mashed = new TenkeySession({ stackSize: 2, practice: true, seed: 9 });
+    runCheck(mashed, canonicalEntry(mashed.current), 0);
+    for (let i = 0; i < 400; i++) {
+      mashed.handleKey(key("9"), 80 + i);
+      mashed.handleKey(key("Backspace"), 80 + i);
+    }
+    runCheck(mashed, canonicalEntry(mashed.current), 500);
+    mashed.finish(10_000);
+
+    const cleanScore = clean.snapshot(10_000);
+    const mashedScore = mashed.snapshot(10_000);
+    expect(mashedScore.numericKeystrokes).toBe(cleanScore.numericKeystrokes);
+    expect(mashedScore.checksSubmitted).toBe(cleanScore.checksSubmitted);
+    expect(mashedScore.keystrokes).toBeGreaterThan(cleanScore.keystrokes);
+    expect(mashedScore.amountAccuracy).toBe(1);
+    expect(mashedScore.correctedErrors).toBe(400);
+  });
+
   it("finishes a stack after the last plus and Tab", () => {
     const session = new TenkeySession({ stackSize: 2, practice: true, seed: 9 });
     expect(session.checks.length).toBe(2);

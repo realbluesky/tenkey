@@ -1,4 +1,4 @@
-import { isDeskKind, isKphErrorKind } from "./scoring";
+import { committedNetFromEvents, isDeskKind } from "./scoring";
 import type { Keystroke } from "./types";
 
 export type PacePoint = {
@@ -29,19 +29,12 @@ export function buildPace(
   const n = Math.max(2, Math.min(points, Math.floor(span / 200) + 1));
 
   const series: PacePoint[] = [];
-  let i = 0;
-  let keys = 0;
-  let errors = 0;
   for (let p = 0; p < n; p++) {
     const t = warmup + (span * p) / (n - 1);
     const at = startedAt + t;
-    while (i < counted.length && counted[i]!.atMs <= at) {
-      keys += 1;
-      if (isKphErrorKind(counted[i]!.kind)) errors += 1;
-      i += 1;
-    }
     const hours = t / 3_600_000;
-    const kph = hours > 0 ? Math.max(0, (keys - errors) / hours) : 0;
+    const keys = committedNetFromEvents(counted, at);
+    const kph = hours > 0 ? keys / hours : 0;
     series.push({ t: Math.round(t), kph: Math.round(kph) });
   }
   return series;
