@@ -1,5 +1,5 @@
 import { pick, randInt } from "./rng";
-import type { CheckItem } from "./types";
+import type { AmountHand, AmountSize, CheckItem } from "./types";
 
 const PAYEES = [
   "Harbor & Pine Supply",
@@ -56,6 +56,20 @@ const MEMOS = [
 
 export const WHOLE_DOLLAR_RATE = 0.3;
 
+const AMOUNT_HANDS: readonly AmountHand[] = [
+  "print-mono",
+  "print-mono",
+  "print-mono",
+  "print-serif",
+  "print-serif",
+  "print-sans",
+  "hand-loop",
+  "hand-loop",
+  "hand-block",
+];
+
+const AMOUNT_SIZES: readonly AmountSize[] = ["sm", "md", "md", "lg", "lg", "xl"];
+
 export function generateCheck(rng: () => number, index: number, startNumber?: number): CheckItem {
   const wholeDollar = rng() < WHOLE_DOLLAR_RATE;
   const cents = randomCents(rng, wholeDollar);
@@ -63,7 +77,20 @@ export function generateCheck(rng: () => number, index: number, startNumber?: nu
   const payee = pick(rng, PAYEES);
   const memoKind = pick(rng, MEMOS);
   const memo = `${memoKind} ${randInt(rng, 1004, 9988)}`;
-  return { index, checkNumber, payee, memo, cents, wholeDollar };
+  const amountHand = pick(rng, AMOUNT_HANDS);
+  const amountSize = pick(rng, AMOUNT_SIZES);
+  const amountTilt = amountHand.startsWith("hand") ? randInt(rng, -3, 3) : 0;
+  return {
+    index,
+    checkNumber,
+    payee,
+    memo,
+    cents,
+    wholeDollar,
+    amountHand,
+    amountSize,
+    amountTilt,
+  };
 }
 
 function randomCents(rng: () => number, wholeDollar: boolean): number {

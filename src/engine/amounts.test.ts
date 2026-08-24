@@ -15,6 +15,9 @@ function check(partial: Partial<CheckItem> & { cents: number; wholeDollar: boole
     checkNumber: 1001,
     payee: "Test",
     memo: "invoice 1",
+    amountHand: "print-mono",
+    amountSize: "md",
+    amountTilt: 0,
     ...partial,
   };
 }
@@ -69,6 +72,26 @@ describe("generateCheck", () => {
     const rate = whole / n;
     expect(rate).toBeGreaterThan(WHOLE_DOLLAR_RATE - 0.05);
     expect(rate).toBeLessThan(WHOLE_DOLLAR_RATE + 0.05);
+  });
+
+  it("varies amount handwriting and size", () => {
+    const rng = mulberry32(12);
+    const hands = new Set<string>();
+    const sizes = new Set<string>();
+    for (let i = 0; i < 80; i++) {
+      const item = generateCheck(rng, i);
+      hands.add(item.amountHand);
+      sizes.add(item.amountSize);
+      if (item.amountHand.startsWith("hand")) {
+        expect(item.amountTilt).toBeGreaterThanOrEqual(-3);
+        expect(item.amountTilt).toBeLessThanOrEqual(3);
+      } else {
+        expect(item.amountTilt).toBe(0);
+      }
+    }
+    expect(hands.has("hand-loop") || hands.has("hand-block")).toBe(true);
+    expect(hands.has("print-mono")).toBe(true);
+    expect(sizes.size).toBeGreaterThan(1);
   });
 
   it("never generates a .00 amount marked as needing pennies", () => {

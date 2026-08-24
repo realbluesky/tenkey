@@ -291,6 +291,10 @@ class App {
     $("#check-memo").textContent = check.memo;
     $("#check-micr").textContent = micr(check);
     $("#check").classList.toggle("is-whole", check.wholeDollar);
+    const box = $("#amount-box");
+    box.dataset.hand = check.amountHand;
+    box.dataset.size = check.amountSize;
+    box.style.setProperty("--amount-tilt", String(check.amountTilt));
   }
 
   private renderTape(): void {

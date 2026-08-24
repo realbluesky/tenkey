@@ -21,6 +21,9 @@ export type BufferChar = {
   miskey: boolean;
 };
 
+export type AmountHand = "print-mono" | "print-serif" | "print-sans" | "hand-loop" | "hand-block";
+export type AmountSize = "sm" | "md" | "lg" | "xl";
+
 export type CheckItem = {
   index: number;
   checkNumber: number;
@@ -28,6 +31,9 @@ export type CheckItem = {
   memo: string;
   cents: number;
   wholeDollar: boolean;
+  amountHand: AmountHand;
+  amountSize: AmountSize;
+  amountTilt: number;
 };
 
 export type Submission = {

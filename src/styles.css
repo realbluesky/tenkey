@@ -478,6 +478,7 @@ h1 {
 }
 
 .amount-box {
+  --amount-tilt: 0;
   grid-column: 2;
   grid-row: 2 / 4;
   align-self: start;
@@ -491,17 +492,80 @@ h1 {
   background: #fffdf8;
 }
 
-.amount-box span {
+.amount-box span,
+.amount-box strong {
   color: var(--amount);
   font-family: var(--mono);
 }
 
+.amount-box[data-hand^="hand"] {
+  transform: rotate(calc(var(--amount-tilt) * 1deg));
+  transform-origin: 20% 70%;
+}
+
 .amount-box strong {
-  font-family: var(--mono);
-  font-size: 1.35rem;
-  color: var(--amount);
+  font-size: 1.28rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+.amount-box[data-size="sm"] strong {
+  font-size: 1.02rem;
+}
+.amount-box[data-size="md"] strong {
+  font-size: 1.22rem;
+}
+.amount-box[data-size="lg"] strong {
+  font-size: 1.48rem;
+}
+.amount-box[data-size="xl"] {
+  min-width: 168px;
+}
+.amount-box[data-size="xl"] strong {
+  font-size: 1.72rem;
+}
+
+.amount-box[data-hand="print-serif"] span,
+.amount-box[data-hand="print-serif"] strong {
+  font-family: var(--serif);
+  font-weight: 700;
+  color: #1c1916;
+  letter-spacing: 0.01em;
+}
+
+.amount-box[data-hand="print-sans"] span,
+.amount-box[data-hand="print-sans"] strong {
+  font-family: var(--sans);
+  font-weight: 600;
+  color: #2a100c;
+}
+
+.amount-box[data-hand^="hand"][data-size="sm"] strong {
+  font-size: 1.2rem;
+}
+.amount-box[data-hand^="hand"][data-size="md"] strong {
+  font-size: 1.42rem;
+}
+.amount-box[data-hand^="hand"][data-size="lg"] strong {
+  font-size: 1.68rem;
+}
+.amount-box[data-hand^="hand"][data-size="xl"] strong {
+  font-size: 1.92rem;
+}
+
+.amount-box[data-hand="hand-loop"] span,
+.amount-box[data-hand="hand-loop"] strong {
+  font-family: "Caveat", "Segoe Script", cursive;
+  font-weight: 600;
+  color: #16357a;
+  letter-spacing: 0.02em;
+}
+
+.amount-box[data-hand="hand-block"] span,
+.amount-box[data-hand="hand-block"] strong {
+  font-family: "Patrick Hand", "Comic Sans MS", cursive;
+  font-weight: 400;
+  color: #161412;
 }
 
 .check footer {

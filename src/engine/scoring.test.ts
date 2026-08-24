@@ -9,6 +9,9 @@ const check: CheckItem = {
   memo: "m",
   cents: 12745,
   wholeDollar: false,
+  amountHand: "print-mono",
+  amountSize: "md",
+  amountTilt: 0,
 };
 
 describe("levenshtein", () => {
