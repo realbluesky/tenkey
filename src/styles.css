@@ -547,6 +547,8 @@ h1 {
   min-height: 0;
   overflow: auto;
   overflow-anchor: none;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
   list-style: none;
   margin: 0;
   padding: 8px 0 12px;
@@ -559,6 +561,12 @@ h1 {
       transparent 0 27px,
       rgba(28, 69, 52, 0.08) 27px 28px
     );
+}
+
+.readoff-list::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .readoff-list li {
