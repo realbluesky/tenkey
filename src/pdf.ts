@@ -139,7 +139,7 @@ export function downloadSessionReport(report: ReportSession): void {
   const note = [
     "Net KPH counts productive keystrokes (digits, decimal, +, and slide) scaled to an hour.",
     "Gross KPH includes miskeys, extra keys, and backspaces. Numeric KPH counts only 0–9 and the decimal.",
-    "Whole-dollar checks may omit .00 without penalty. Other amounts require pennies.",
+    "Trailing zeros after the decimal may be omitted (4 for $4.00, 73.7 for $73.70).",
     "Uncorrected accuracy reflects remaining mistakes. Corrected accuracy also treats backspaces as errors.",
   ].join(" ");
   const wrapped = doc.splitTextToSize(note, 532);

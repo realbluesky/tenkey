@@ -55,11 +55,17 @@ describe("isAcceptable", () => {
     expect(isAcceptable(whole, "51")).toBe(false);
   });
 
-  it("requires pennies on non-whole amounts", () => {
+  it("requires the cents value, but trailing zeros may be omitted", () => {
     expect(isAcceptable(change, "127.45")).toBe(true);
     expect(isAcceptable(change, "127")).toBe(false);
     expect(isAcceptable(change, "127.4")).toBe(false);
     expect(isAcceptable(change, "127.46")).toBe(false);
+    const seventy = check({ cents: 7370, wholeDollar: false });
+    expect(isAcceptable(seventy, "73.7")).toBe(true);
+    expect(isAcceptable(seventy, "73.70")).toBe(true);
+    expect(isAcceptable(seventy, "73")).toBe(false);
+    expect(isAcceptable(check({ cents: 10, wholeDollar: false }), "0.1")).toBe(true);
+    expect(isAcceptable(check({ cents: 1, wholeDollar: false }), "0.1")).toBe(false);
   });
 
   it("accepts the range edges", () => {
@@ -113,23 +119,24 @@ describe("generateCheck", () => {
     }
   });
 
-  it("stays in $0.01–$9999.99 and includes both ends of the range", () => {
+  it("stays in $0.01–$9999.99 with a payables-sized median", () => {
     const rng = mulberry32(7);
-    let min = Infinity;
-    let max = 0;
-    let underDollar = 0;
-    const n = 3000;
+    const sample: number[] = [];
+    let underHundred = 0;
+    const n = 4000;
     for (let i = 0; i < n; i++) {
       const cents = generateCheck(rng, i).cents;
       expect(cents).toBeGreaterThanOrEqual(MIN_CENTS);
       expect(cents).toBeLessThanOrEqual(MAX_CENTS);
-      min = Math.min(min, cents);
-      max = Math.max(max, cents);
-      if (cents < 100) underDollar++;
+      sample.push(cents);
+      if (cents < 10000) underHundred++;
     }
-    expect(underDollar).toBeGreaterThan(0);
-    expect(min).toBeLessThan(100);
-    expect(max).toBeGreaterThan(5000 * 100);
+    sample.sort((a, b) => a - b);
+    const median = sample[Math.floor(n / 2)]!;
+    expect(median).toBeGreaterThanOrEqual(10000);
+    expect(median).toBeLessThanOrEqual(500000);
+    expect(underHundred / n).toBeLessThan(0.15);
+    expect(sample[sample.length - 1]!).toBeGreaterThan(5000 * 100);
   });
 });
 

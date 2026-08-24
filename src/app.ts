@@ -37,7 +37,12 @@ function $(sel: string): HTMLElement {
 }
 
 function keyFromEvent(event: KeyboardEvent): KeyInput {
-  return { key: event.key, code: event.code, location: event.location };
+  return {
+    key: event.key,
+    code: event.code,
+    location: event.location,
+    shiftKey: event.shiftKey,
+  };
 }
 
 export function boot(): void {
@@ -238,16 +243,18 @@ class App {
       this.complete();
       return;
     }
-    if (result.slid) this.playSlide();
+    if (result.unslid) this.playUnslide();
+    else if (result.slid) this.playSlide(result.recycle);
+    else if (result.recycle) this.finishSlideSwap();
     this.renderTape();
     this.renderEntry();
     this.renderHint();
     this.renderLive(now);
   }
 
-  private playSlide(): void {
+  private playSlide(recycle: boolean): void {
     if (!this.front || !this.waiting) return;
-    this.finishSlideSwap();
+    if (this.slideTimer != null) this.finishSlideSwap();
     const leaving = this.front;
     const revealed = this.waiting;
     leaving.classList.add("is-leaving");
@@ -255,7 +262,26 @@ class App {
     revealed.classList.add("is-current");
     this.front = revealed;
     this.pendingLeave = leaving;
-    this.slideTimer = window.setTimeout(() => this.finishSlideSwap(), 280);
+    if (recycle) {
+      this.slideTimer = window.setTimeout(() => this.finishSlideSwap(), 280);
+    }
+  }
+
+  private playUnslide(): void {
+    if (!this.pendingLeave || !this.front) return;
+    if (this.slideTimer != null) {
+      window.clearTimeout(this.slideTimer);
+      this.slideTimer = null;
+    }
+    const returning = this.pendingLeave;
+    const demoted = this.front;
+    returning.classList.remove("is-leaving", "is-settling");
+    returning.classList.add("is-current");
+    demoted.classList.remove("is-current");
+    demoted.classList.add("is-waiting");
+    this.front = returning;
+    this.waiting = demoted;
+    this.pendingLeave = null;
   }
 
   private finishSlideSwap(): void {
@@ -359,12 +385,14 @@ class App {
       hint.textContent = "First digit starts the clock.";
     } else if (this.session.phase === "awaiting_slide") {
       hint.textContent = "Tab — slide this check aside.";
+    } else if (this.session.phase === "awaiting_plus") {
+      hint.textContent = "+ to add. Shift+Tab brings the check back.";
     } else if (this.session.buffer.length === 0) {
-      hint.textContent = "Enter the amount, then press +.";
+      hint.textContent = "Enter the amount, then + or Tab.";
     } else if (this.session.buffer.some((ch) => ch.miskey)) {
       hint.textContent = "Backspace the red keys, then +.";
     } else {
-      hint.textContent = "Press + to add, then Tab.";
+      hint.textContent = "+ to add, or Tab to slide first.";
     }
     this.front?.classList.toggle("is-whole", this.session.current.wholeDollar);
   }

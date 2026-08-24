@@ -5,7 +5,16 @@ import { canonicalEntry } from "./amounts";
 import type { KeyInput } from "./types";
 
 function key(k: string, extras: Partial<KeyInput> = {}): KeyInput {
-  return { key: k, code: extras.code ?? "", location: extras.location ?? 0 };
+  return {
+    key: k,
+    code: extras.code ?? "",
+    location: extras.location ?? 0,
+    shiftKey: extras.shiftKey ?? false,
+  };
+}
+
+function tab(shift = false): KeyInput {
+  return key("Tab", { code: "Tab", shiftKey: shift });
 }
 
 function typeAmount(session: TenkeySession, raw: string, now: number): void {
@@ -18,7 +27,7 @@ function typeAmount(session: TenkeySession, raw: string, now: number): void {
 function runCheck(session: TenkeySession, raw: string, now: number): void {
   typeAmount(session, raw, now);
   session.handleKey(key("+"), now);
-  session.handleKey(key("Tab", { code: "Tab" }), now);
+  session.handleKey(tab(), now);
 }
 
 describe("TenkeySession", () => {
@@ -26,7 +35,7 @@ describe("TenkeySession", () => {
     const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 1 });
     session.handleKey(key("a"), 1000);
     session.handleKey(key("+"), 1001);
-    session.handleKey(key("Tab", { code: "Tab" }), 1002);
+    session.handleKey(tab(), 1002);
     expect(session.phase).toBe("armed");
     expect(session.startedAt).toBeNull();
     const result = session.handleKey(key("4"), 1500);
@@ -35,20 +44,40 @@ describe("TenkeySession", () => {
     expect(session.startedAt).toBe(1500);
   });
 
-  it("requires plus then slide, in that order", () => {
+  it("accepts plus then Tab", () => {
     const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 7 });
-    const expected = canonicalEntry(session.current);
-    session.handleKey(key(expected[0]!), 0);
-    typeAmount(session, expected.slice(1), 10);
-    const earlySlide = session.handleKey(key("Tab", { code: "Tab" }), 20);
-    expect(earlySlide.kind).toBe("extra");
-    expect(session.currentIndex).toBe(0);
+    const first = session.current;
+    const expected = canonicalEntry(first);
+    typeAmount(session, expected, 0);
     const plus = session.handleKey(key("+"), 30);
     expect(plus.submitted?.correct).toBe(true);
     expect(session.phase).toBe("awaiting_slide");
-    const slide = session.handleKey(key("Tab", { code: "Tab" }), 40);
+    const slide = session.handleKey(tab(), 40);
     expect(slide.slid).toBe(true);
     expect(session.currentIndex).toBe(1);
+    expect(session.entryIndex).toBe(1);
+  });
+
+  it("accepts Tab then plus, and Shift+Tab brings the check back", () => {
+    const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 7 });
+    const first = session.current;
+    const expected = canonicalEntry(first);
+    typeAmount(session, expected, 0);
+    const slide = session.handleKey(tab(), 20);
+    expect(slide.slid).toBe(true);
+    expect(session.phase).toBe("awaiting_plus");
+    expect(session.currentIndex).toBe(1);
+    expect(session.entryIndex).toBe(0);
+    const back = session.handleKey(tab(true), 25);
+    expect(back.unslid).toBe(true);
+    expect(session.phase).toBe("entering");
+    expect(session.currentIndex).toBe(0);
+    session.handleKey(tab(), 28);
+    const plus = session.handleKey(key("+"), 30);
+    expect(plus.submitted?.check).toBe(first);
+    expect(plus.submitted?.correct).toBe(true);
+    expect(session.phase).toBe("entering");
+    expect(session.entryIndex).toBe(1);
   });
 
   it("slides on Tab after plus, not Space or Control", () => {
@@ -61,7 +90,7 @@ describe("TenkeySession", () => {
       false,
     );
     expect(session.phase).toBe("awaiting_slide");
-    const slide = session.handleKey(key("Tab", { code: "Tab" }), 4);
+    const slide = session.handleKey(tab(), 4);
     expect(slide.slid).toBe(true);
   });
 
@@ -123,7 +152,7 @@ describe("TenkeySession", () => {
     const first = session.current;
     typeAmount(session, "999.99", 0);
     session.handleKey(key("+"), 1);
-    session.handleKey(key("Tab", { code: "Tab" }), 2);
+    session.handleKey(tab(), 2);
     const score = session.snapshot(3);
     expect(score.enteredTotalCents).toBe(99999);
     expect(score.trueTotalCents).toBe(first.cents);

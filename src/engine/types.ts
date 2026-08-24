@@ -1,10 +1,17 @@
-export type Phase = "armed" | "entering" | "awaiting_slide" | "done" | "aborted";
+export type Phase =
+  | "armed"
+  | "entering"
+  | "awaiting_slide"
+  | "awaiting_plus"
+  | "done"
+  | "aborted";
 
 export type KeyKind =
   | "digit"
   | "decimal"
   | "plus"
   | "slide"
+  | "unslide"
   | "backspace"
   | "miskey"
   | "extra"
@@ -14,6 +21,7 @@ export type KeyInput = {
   key: string;
   code: string;
   location: number;
+  shiftKey?: boolean;
 };
 
 export type BufferChar = {
@@ -77,5 +85,7 @@ export type HandleResult = {
   started: boolean;
   submitted: Submission | null;
   slid: boolean;
+  unslid: boolean;
+  recycle: boolean;
   finished: boolean;
 };

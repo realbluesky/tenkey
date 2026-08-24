@@ -66,7 +66,11 @@ export function computeScore(input: {
   const uncorrectedErrors = checksSubmitted - checksCorrect + leftoverPenalty;
 
   const errorKeys = counted.filter(
-    (event) => event.kind === "miskey" || event.kind === "backspace" || event.kind === "extra",
+    (event) =>
+      event.kind === "miskey" ||
+      event.kind === "backspace" ||
+      event.kind === "extra" ||
+      event.kind === "unslide",
   ).length;
 
   const grossKph = hours > 0 ? keystrokes / hours : 0;

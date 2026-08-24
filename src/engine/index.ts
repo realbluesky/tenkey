@@ -1,4 +1,4 @@
-export { TenkeySession, isDigitKey, isPlusKey, isSlideKey } from "./session";
+export { TenkeySession, isDigitKey, isPlusKey, isSlideKey, isUnslideKey } from "./session";
 export {
   formatMoney,
   formatCheckAmount,

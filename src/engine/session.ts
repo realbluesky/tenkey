@@ -35,7 +35,11 @@ export function isPlusKey(input: KeyInput): boolean {
 }
 
 export function isSlideKey(input: KeyInput): boolean {
-  return input.key === "Tab" || input.code === "Tab";
+  return (input.key === "Tab" || input.code === "Tab") && !input.shiftKey;
+}
+
+export function isUnslideKey(input: KeyInput): boolean {
+  return (input.key === "Tab" || input.code === "Tab") && !!input.shiftKey;
 }
 
 export function isBackspaceKey(input: KeyInput): boolean {
@@ -56,6 +60,7 @@ export class TenkeySession {
   endedAt: number | null = null;
   checks: CheckItem[] = [];
   currentIndex = 0;
+  entryIndex = 0;
   buffer: BufferChar[] = [];
   events: Keystroke[] = [];
   submissions: Submission[] = [];
@@ -83,6 +88,10 @@ export class TenkeySession {
 
   get current(): CheckItem {
     return this.checks[this.currentIndex]!;
+  }
+
+  get entryCheck(): CheckItem {
+    return this.checks[this.entryIndex]!;
   }
 
   remainingMs(now: number): number {
@@ -133,6 +142,8 @@ export class TenkeySession {
       started: false,
       submitted: null,
       slid: false,
+      unslid: false,
+      recycle: false,
       finished: false,
     };
     if (this.phase === "done" || this.phase === "aborted") return empty;
@@ -145,17 +156,66 @@ export class TenkeySession {
       this.startedAt = now;
       this.phase = "entering";
       this.pushDigit(input, now);
-      return { kind: "digit", started: true, submitted: null, slid: false, finished: false };
+      return { ...empty, kind: "digit", started: true };
     }
 
-    if (this.phase === "entering") {
-      return this.handleEntering(input, now);
-    }
-
+    if (this.phase === "entering") return this.handleEntering(input, now);
+    if (this.phase === "awaiting_plus") return this.handleAwaitingPlus(input, now);
     return this.handleAwaitingSlide(input, now);
   }
 
   private handleEntering(input: KeyInput, now: number): HandleResult {
+    if (isUnslideKey(input)) {
+      this.record(input, now, "extra");
+      return this.result("extra");
+    }
+    if (isSlideKey(input)) {
+      this.currentIndex += 1;
+      this.ensureLookahead();
+      this.lastSlideAt = now;
+      this.phase = "awaiting_plus";
+      this.record(input, now, "slide");
+      return this.result("slide", { slid: true, recycle: false });
+    }
+    if (isPlusKey(input)) {
+      return this.submit(input, now, "awaiting_slide", false);
+    }
+    return this.handleBuffer(input, now);
+  }
+
+  private handleAwaitingPlus(input: KeyInput, now: number): HandleResult {
+    if (isUnslideKey(input)) {
+      this.currentIndex = this.entryIndex;
+      this.phase = "entering";
+      this.record(input, now, "unslide");
+      return this.result("unslide", { unslid: true });
+    }
+    if (isSlideKey(input)) {
+      this.record(input, now, "extra");
+      return this.result("extra");
+    }
+    if (isPlusKey(input)) {
+      return this.submit(input, now, "entering", true);
+    }
+    return this.handleBuffer(input, now);
+  }
+
+  private handleAwaitingSlide(input: KeyInput, now: number): HandleResult {
+    if (isSlideKey(input)) {
+      this.currentIndex += 1;
+      this.entryIndex = this.currentIndex;
+      this.ensureLookahead();
+      this.lastSlideAt = now;
+      this.lastSubmitted = null;
+      this.phase = "entering";
+      this.record(input, now, "slide");
+      return this.result("slide", { slid: true, recycle: true });
+    }
+    this.record(input, now, "extra");
+    return this.result("extra");
+  }
+
+  private handleBuffer(input: KeyInput, now: number): HandleResult {
     if (isDigitKey(input)) {
       this.pushDigit(input, now);
       return this.result("digit");
@@ -178,13 +238,6 @@ export class TenkeySession {
       this.record(input, now, "backspace");
       return this.result("backspace");
     }
-    if (isPlusKey(input)) {
-      return this.submit(input, now);
-    }
-    if (isSlideKey(input)) {
-      this.record(input, now, "extra");
-      return this.result("extra");
-    }
     if (isPrintable(input)) {
       this.pushChar(input.key, true, now, "miskey");
       return this.result("miskey");
@@ -193,27 +246,18 @@ export class TenkeySession {
     return this.result("ignored");
   }
 
-  private handleAwaitingSlide(input: KeyInput, now: number): HandleResult {
-    if (isSlideKey(input)) {
-      this.currentIndex += 1;
-      this.ensureLookahead();
-      this.lastSlideAt = now;
-      this.lastSubmitted = null;
-      this.phase = "entering";
-      this.record(input, now, "slide");
-      return { kind: "slide", started: false, submitted: null, slid: true, finished: false };
-    }
-    this.record(input, now, "extra");
-    return this.result("extra");
-  }
-
-  private submit(input: KeyInput, now: number): HandleResult {
+  private submit(
+    input: KeyInput,
+    now: number,
+    nextPhase: "awaiting_slide" | "entering",
+    recycle: boolean,
+  ): HandleResult {
     const raw = this.buffer.map((ch) => ch.ch).join("");
     if (raw.length === 0) {
       this.record(input, now, "extra");
       return this.result("extra");
     }
-    const check = this.current;
+    const check = this.entryCheck;
     const parsedCents = parseEntry(raw);
     const correct = isAcceptable(check, raw);
     const submission: Submission = {
@@ -226,9 +270,12 @@ export class TenkeySession {
     this.submissions.push(submission);
     this.lastSubmitted = submission;
     this.buffer = [];
-    this.phase = "awaiting_slide";
+    if (nextPhase === "entering") {
+      this.entryIndex = this.currentIndex;
+    }
+    this.phase = nextPhase;
     this.record(input, now, "plus");
-    return { kind: "plus", started: false, submitted: submission, slid: false, finished: false };
+    return this.result("plus", { submitted: submission, recycle });
   }
 
   private pushDigit(input: KeyInput, now: number): void {
@@ -253,8 +300,17 @@ export class TenkeySession {
     });
   }
 
-  private result(kind: KeyKind): HandleResult {
-    return { kind, started: false, submitted: null, slid: false, finished: false };
+  private result(kind: KeyKind, extra: Partial<HandleResult> = {}): HandleResult {
+    return {
+      kind,
+      started: false,
+      submitted: null,
+      slid: false,
+      unslid: false,
+      recycle: false,
+      finished: false,
+      ...extra,
+    };
   }
 
   private ensureLookahead(): void {

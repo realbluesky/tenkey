@@ -97,15 +97,15 @@ export function generateCheck(rng: () => number, index: number, startNumber?: nu
 
 function randomCents(rng: () => number, wholeDollar: boolean): number {
   if (wholeDollar) return randomDollars(rng) * 100;
-  if (rng() < 0.1) return randInt(rng, MIN_CENTS, 99);
+  if (rng() < 0.03) return randInt(rng, MIN_CENTS, 99);
   return randomDollars(rng) * 100 + randInt(rng, 1, 99);
 }
 
 function randomDollars(rng: () => number): number {
   const bucket = rng();
-  if (bucket < 0.5) return randInt(rng, 1, 99);
-  if (bucket < 0.8) return randInt(rng, 100, 999);
-  if (bucket < 0.95) return randInt(rng, 1000, 4999);
+  if (bucket < 0.08) return randInt(rng, 1, 99);
+  if (bucket < 0.5) return randInt(rng, 100, 999);
+  if (bucket < 0.88) return randInt(rng, 1000, 4999);
   return randInt(rng, 5000, 9999);
 }
 
@@ -138,23 +138,17 @@ export function parseEntry(raw: string): number | null {
 export function acceptableStrings(check: CheckItem): string[] {
   const dollars = Math.floor(check.cents / 100);
   const remainder = check.cents % 100;
-  if (check.wholeDollar) {
-    return [
-      String(dollars),
-      `${dollars}.`,
-      `${dollars}.0`,
-      `${dollars}.00`,
-    ];
+  if (remainder === 0) {
+    return [String(dollars), `${dollars}.`, `${dollars}.0`, `${dollars}.00`];
   }
-  return [`${dollars}.${String(remainder).padStart(2, "0")}`];
+  const padded = `${dollars}.${String(remainder).padStart(2, "0")}`;
+  if (remainder % 10 === 0) return [`${dollars}.${remainder / 10}`, padded];
+  return [padded];
 }
 
 export function isAcceptable(check: CheckItem, raw: string): boolean {
   const parsed = parseEntry(raw);
-  if (parsed === null || parsed !== check.cents) return false;
-  if (check.wholeDollar) return true;
-  const parts = raw.split(".");
-  return parts.length === 2 && parts[1]!.length === 2;
+  return parsed !== null && parsed === check.cents;
 }
 
 export function canonicalEntry(check: CheckItem): string {
