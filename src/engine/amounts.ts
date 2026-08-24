@@ -55,6 +55,8 @@ const MEMOS = [
 ] as const;
 
 export const WHOLE_DOLLAR_RATE = 0.3;
+export const MIN_CENTS = 1;
+export const MAX_CENTS = 999_999;
 
 const AMOUNT_HANDS: readonly AmountHand[] = [
   "print-mono",
@@ -94,15 +96,17 @@ export function generateCheck(rng: () => number, index: number, startNumber?: nu
 }
 
 function randomCents(rng: () => number, wholeDollar: boolean): number {
-  const bucket = rng();
-  let dollars: number;
-  if (bucket < 0.5) dollars = randInt(rng, 1, 99);
-  else if (bucket < 0.8) dollars = randInt(rng, 100, 999);
-  else if (bucket < 0.95) dollars = randInt(rng, 1000, 4999);
-  else dollars = randInt(rng, 5000, 19999);
+  if (wholeDollar) return randomDollars(rng) * 100;
+  if (rng() < 0.1) return randInt(rng, MIN_CENTS, 99);
+  return randomDollars(rng) * 100 + randInt(rng, 1, 99);
+}
 
-  if (wholeDollar) return dollars * 100;
-  return dollars * 100 + randInt(rng, 1, 99);
+function randomDollars(rng: () => number): number {
+  const bucket = rng();
+  if (bucket < 0.5) return randInt(rng, 1, 99);
+  if (bucket < 0.8) return randInt(rng, 100, 999);
+  if (bucket < 0.95) return randInt(rng, 1000, 4999);
+  return randInt(rng, 5000, 9999);
 }
 
 export function formatMoney(cents: number, withDollar = true): string {

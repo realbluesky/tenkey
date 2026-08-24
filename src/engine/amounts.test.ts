@@ -5,6 +5,8 @@ import {
   parseEntry,
   generateCheck,
   WHOLE_DOLLAR_RATE,
+  MIN_CENTS,
+  MAX_CENTS,
 } from "./amounts";
 import { mulberry32 } from "./rng";
 import type { CheckItem } from "./types";
@@ -59,6 +61,14 @@ describe("isAcceptable", () => {
     expect(isAcceptable(change, "127.4")).toBe(false);
     expect(isAcceptable(change, "127.46")).toBe(false);
   });
+
+  it("accepts the range edges", () => {
+    const penny = check({ cents: 1, wholeDollar: false });
+    const top = check({ cents: 999999, wholeDollar: false });
+    expect(isAcceptable(penny, "0.01")).toBe(true);
+    expect(isAcceptable(top, "9999.99")).toBe(true);
+    expect(isAcceptable(check({ cents: 999900, wholeDollar: true }), "9999")).toBe(true);
+  });
 });
 
 describe("generateCheck", () => {
@@ -101,6 +111,25 @@ describe("generateCheck", () => {
       if (!item.wholeDollar) expect(item.cents % 100).not.toBe(0);
       if (item.wholeDollar) expect(item.cents % 100).toBe(0);
     }
+  });
+
+  it("stays in $0.01–$9999.99 and includes both ends of the range", () => {
+    const rng = mulberry32(7);
+    let min = Infinity;
+    let max = 0;
+    let underDollar = 0;
+    const n = 3000;
+    for (let i = 0; i < n; i++) {
+      const cents = generateCheck(rng, i).cents;
+      expect(cents).toBeGreaterThanOrEqual(MIN_CENTS);
+      expect(cents).toBeLessThanOrEqual(MAX_CENTS);
+      min = Math.min(min, cents);
+      max = Math.max(max, cents);
+      if (cents < 100) underDollar++;
+    }
+    expect(underDollar).toBeGreaterThan(0);
+    expect(min).toBeLessThan(100);
+    expect(max).toBeGreaterThan(5000 * 100);
   });
 });
 
