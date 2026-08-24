@@ -37,4 +37,9 @@ npm test
 npm run dev
 ```
 
-GitHub Pages deploys from `main` via GitHub Actions.
+The live site is built `dist/` on the `gh-pages` branch (`https://realbluesky.github.io/tenkey/`). Rebuild and push that branch after UI changes:
+
+```bash
+npm run build
+# copy dist/ onto gh-pages and push
+```
