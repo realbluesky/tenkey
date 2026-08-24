@@ -33,7 +33,12 @@ export function isDecimalKey(input: KeyInput): boolean {
 }
 
 export function isPlusKey(input: KeyInput): boolean {
-  return input.key === "+" || input.code === "NumpadAdd";
+  return (
+    input.key === "+" ||
+    input.key === "=" ||
+    input.code === "NumpadAdd" ||
+    input.code === "NumpadEqual"
+  );
 }
 
 export function isEnterKey(input: KeyInput): boolean {

@@ -12,6 +12,8 @@ import {
   kphBand,
   sourceTitle,
   TenkeySession,
+  isEnterKey,
+  isPlusKey,
 } from "./engine";
 import { buildPace } from "./engine/series";
 import { renderPaceSvg } from "./chart";
@@ -88,6 +90,7 @@ class App {
   private waiting: HTMLElement | null = null;
   private pendingLeave: HTMLElement | null = null;
   private tapePrinted = 0;
+  private softDown = new Map<string, HTMLElement>();
 
   mount(): void {
     $("#version-stamp").textContent = `v${VERSION}`;
@@ -158,6 +161,8 @@ class App {
     );
 
     document.addEventListener("keydown", (event) => this.onKey(event));
+    document.addEventListener("keyup", (event) => this.onKeyUp(event));
+    window.addEventListener("blur", () => this.clearSoftDown());
     $("#soft-keys").addEventListener("pointerdown", (event) => {
       const btn = (event.target as HTMLElement).closest<HTMLElement>("[data-key]");
       if (!btn) return;
@@ -435,6 +440,7 @@ class App {
     this.session.abort(performance.now());
     this.stopTimer();
     this.finishSlideSwap();
+    this.clearSoftDown();
     this.show("setup");
   }
 
@@ -454,7 +460,10 @@ class App {
     if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
 
     const input = keyFromEvent(event);
-    if (event.repeat && (input.key === "Tab" || input.key === "+" || input.key === "Enter")) {
+    if (
+      event.repeat &&
+      (input.key === "Tab" || input.key === "+" || input.key === "=" || input.key === "Enter")
+    ) {
       event.preventDefault();
       return;
     }
@@ -464,7 +473,54 @@ class App {
       return;
     }
     event.preventDefault();
+    this.pressSoftKey(input);
     this.send(input);
+  }
+
+  private onKeyUp(event: KeyboardEvent): void {
+    if (this.screen !== "test") return;
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+    this.releaseSoftKey(keyFromEvent(event));
+  }
+
+  private pressSoftKey(input: KeyInput): void {
+    const btn = this.softKeyFor(input);
+    if (!btn) return;
+    const id = input.code || input.key;
+    btn.classList.add("is-down");
+    this.softDown.set(id, btn);
+  }
+
+  private releaseSoftKey(input: KeyInput): void {
+    const id = input.code || input.key;
+    const btn = this.softDown.get(id);
+    if (!btn) return;
+    btn.classList.remove("is-down");
+    this.softDown.delete(id);
+  }
+
+  private clearSoftDown(): void {
+    for (const btn of this.softDown.values()) btn.classList.remove("is-down");
+    this.softDown.clear();
+  }
+
+  private softKeyFor(input: KeyInput): HTMLElement | null {
+    const pad = document.querySelector("#soft-keys");
+    if (!pad) return null;
+    if (isPlusKey(input)) return pad.querySelector(".plus");
+    if (isEnterKey(input) && this.session?.desk === "spreadsheet") {
+      return pad.querySelector(".plus");
+    }
+    if (input.code) {
+      const byCode = pad.querySelector<HTMLElement>(`[data-code="${input.code}"]`);
+      if (byCode) return byCode;
+    }
+    if (input.key) {
+      const byKey = pad.querySelector<HTMLElement>(`[data-key="${CSS.escape(input.key)}"]`);
+      if (byKey) return byKey;
+    }
+    return null;
   }
 
   private send(input: KeyInput): void {
@@ -558,6 +614,7 @@ class App {
     if (!this.session) return;
     this.stopTimer();
     this.finishSlideSwap();
+    this.clearSoftDown();
     const now = this.session.endedAt ?? performance.now();
     const score = this.session.snapshot(now);
     const pace =

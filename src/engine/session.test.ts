@@ -52,6 +52,15 @@ describe("TenkeySession", () => {
     expect(session.buffer.map((ch) => ch.ch).join("")).toBe(".");
   });
 
+  it("treats number-row equals as plus", () => {
+    const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 7 });
+    const expected = canonicalEntry(session.current);
+    typeAmount(session, expected, 0);
+    const plus = session.handleKey(key("=", { code: "Equal" }), 30);
+    expect(plus.submitted?.correct).toBe(true);
+    expect(session.phase).toBe("awaiting_slide");
+  });
+
   it("accepts plus then Tab", () => {
     const session = new TenkeySession({ durationMs: 60_000, practice: true, seed: 7 });
     const first = session.current;
@@ -281,6 +290,19 @@ describe("spreadsheet desk", () => {
     expect(session.submissions).toHaveLength(0);
     const plus = session.handleKey(key("+"), 31);
     expect(plus.submitted?.correct).toBe(true);
+  });
+
+  it("treats number-row equals as plus, not a spreadsheet commit", () => {
+    const session = new TenkeySession({
+      durationMs: 60_000,
+      practice: true,
+      seed: 7,
+      desk: "spreadsheet",
+    });
+    typeAmount(session, canonicalEntry(session.current), 0);
+    const equals = session.handleKey(key("=", { code: "Equal" }), 30);
+    expect(equals.kind).toBe("extra");
+    expect(session.submissions).toHaveLength(0);
   });
 });
 

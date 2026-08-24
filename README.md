@@ -11,7 +11,7 @@ Live: [realbluesky.github.io/tenkey](https://realbluesky.github.io/tenkey/)
 
 1. Pick **Checks** or **Transcription**, then a **stack/list** (10–100, default) or a **timed** run.
 2. Type the amount from the current check, or from the printed list.
-3. On a **calculator** desk, press `+` to add (`Enter` does not commit). On a **spreadsheet** desk, press `Enter` to commit the cell and work down the column (`+` does not commit). In check processing, `Tab` slides the check aside — either order with the commit key. Calculator and spreadsheet share scores **within** the same job; transcription never mixes with checks.
+3. On a **calculator** desk, press `+` to add (`Enter` does not commit). On a **spreadsheet** desk, press `Enter` to commit the cell and work down the column (`+` does not commit). The number-row `=` key counts as `+`, so you do not need Shift. In check processing, `Tab` slides the check aside — either order with the commit key. Calculator and spreadsheet share scores **within** the same job; transcription never mixes with checks.
 4. `Shift+Tab` brings a check back if you slid too soon.
 5. The clock starts on the **first numeric key**.
 

@@ -1047,6 +1047,13 @@ h1 {
   font-family: var(--mono);
 }
 
+.soft-keys button.is-down,
+.soft-keys button:active {
+  transform: translateY(2px);
+  border-bottom-width: 1px;
+  filter: brightness(1.45);
+}
+
 .soft-keys .plus {
   grid-column: 4;
   grid-row: 1 / span 2;
