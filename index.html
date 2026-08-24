@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="TENKEY measures numeric keypad accuracy and speed (KPH) with a check-totals simulation."
+    />
+    <title>TENKEY — check totals</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <script type="module" crossorigin src="./assets/index-Cnrjdudx.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-DneiRiXZ.css">
+  </head>
+  <body>
+    <div class="desk">
+      <header class="mast">
+        <div class="brand">
+          <span class="brand-mark">10</span>
+          <div>
+            <strong>TENKEY</strong>
+            <em>check totals</em>
+          </div>
+        </div>
+        <div id="live-stats" class="live-stats" hidden>
+          <div><span>time</span><strong id="stat-time">1:00</strong></div>
+          <div><span>net kph</span><strong id="stat-kph">—</strong></div>
+          <div><span>accuracy</span><strong id="stat-acc">—</strong></div>
+        </div>
+        <button id="abort-btn" class="text-btn" type="button" hidden>Abort</button>
+      </header>
+
+      <main>
+        <section id="setup" class="panel">
+          <div class="ticket">
+            <p class="kicker">Station 4 · Check processing</p>
+            <h1>Add the stack. Slide each check aside.</h1>
+            <p class="lede">
+              Type each amount, press <kbd>+</kbd> to add it, then
+              <kbd>Space</kbd> or <kbd>Left Ctrl</kbd> to move the check. The
+              clock starts on your first digit.
+            </p>
+
+            <label class="field">
+              <span>Operator name</span>
+              <input id="name-input" maxlength="40" placeholder="Your name" autocomplete="nickname" />
+            </label>
+
+            <div class="field">
+              <span>Duration</span>
+              <div id="duration-pills" class="pills">
+                <button type="button" data-ms="30000">0:30</button>
+                <button type="button" data-ms="60000" class="is-on">1:00</button>
+                <button type="button" data-ms="180000">3:00</button>
+                <button type="button" data-ms="300000">5:00</button>
+                <button type="button" data-ms="600000">10:00</button>
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Mode</span>
+              <div id="mode-pills" class="pills">
+                <button type="button" data-mode="practice" class="is-on">Practice</button>
+                <button type="button" data-mode="exam">Exam</button>
+              </div>
+              <p class="fine">
+                Practice marks each amount right or wrong. Exam hides that until
+                the end — exam scores are the official personal bests.
+              </p>
+            </div>
+
+            <ol class="howto">
+              <li>Read the amount in the box on the top check.</li>
+              <li>Enter it on the 10-key. Whole-dollar checks may skip <code>.00</code>.</li>
+              <li>Press <kbd>+</kbd> to add toward the total.</li>
+              <li>Press <kbd>Space</kbd> to slide the check off the stack.</li>
+              <li>Alpha and stray keys show on the display and must be corrected.</li>
+            </ol>
+
+            <div class="ticket-actions">
+              <button id="start-btn" class="primary" type="button">Arm the test</button>
+              <button id="pdf-bests-setup-btn" class="ghost" type="button">Official bests PDF</button>
+            </div>
+          </div>
+
+          <aside class="side-card">
+            <h2>Personal bests (exam)</h2>
+            <p id="bests-empty" class="muted">No exam sessions on this device yet.</p>
+            <ul id="bests-list" class="bests"></ul>
+            <h2>Recent</h2>
+            <p id="history-empty" class="muted">No sessions on this device yet.</p>
+            <table class="history">
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Mode</th>
+                  <th>Time</th>
+                  <th>KPH</th>
+                  <th>Acc</th>
+                </tr>
+              </thead>
+              <tbody id="history-body"></tbody>
+            </table>
+            <p class="fine">Progress is stored in this browser only.</p>
+          </aside>
+        </section>
+
+        <section id="test" class="panel workspace" hidden>
+          <div class="stack-area">
+            <div class="stack">
+              <div class="paper peek p3"></div>
+              <div class="paper peek p2"></div>
+              <div class="paper peek p1"></div>
+              <article class="check" id="check">
+                <header>
+                  <span class="bank">TENKEY NATIONAL BANK</span>
+                  <span class="no">No. <em id="check-no">1001</em></span>
+                </header>
+                <div class="pay-row">
+                  <span>Pay to the<br />order of</span>
+                  <strong id="check-payee">Harbor &amp; Pine Supply</strong>
+                </div>
+                <div class="words" id="check-words">One hundred and 00/100 Dollars</div>
+                <div class="amount-box">
+                  <span>$</span>
+                  <strong id="check-amount">0.00</strong>
+                </div>
+                <footer>
+                  <div>Memo <em id="check-memo">invoice 4412</em></div>
+                  <div class="micr" id="check-micr"></div>
+                </footer>
+              </article>
+            </div>
+            <p class="hint" id="hint"></p>
+          </div>
+
+          <aside class="machine">
+            <div class="tape-window">
+              <div class="tape-head">tape</div>
+              <div id="tape" class="tape"></div>
+            </div>
+            <div class="lcd">
+              <div class="lcd-label">total</div>
+              <div id="lcd-total" class="lcd-total">$0.00</div>
+              <div class="lcd-label">entry</div>
+              <div id="lcd-entry" class="lcd-entry"></div>
+            </div>
+            <div id="soft-keys" class="soft-keys" aria-hidden="true">
+              <button type="button" data-key="7">7</button>
+              <button type="button" data-key="8">8</button>
+              <button type="button" data-key="9">9</button>
+              <button type="button" data-key="+" class="plus">+</button>
+              <button type="button" data-key="4">4</button>
+              <button type="button" data-key="5">5</button>
+              <button type="button" data-key="6">6</button>
+              <button type="button" data-key="1">1</button>
+              <button type="button" data-key="2">2</button>
+              <button type="button" data-key="3">3</button>
+              <button type="button" data-key="Backspace" class="bksp">⌫</button>
+              <button type="button" data-key="0" class="zero">0</button>
+              <button type="button" data-key="." data-code="NumpadDecimal">.</button>
+              <button type="button" data-key=" " class="slide">SLIDE</button>
+            </div>
+          </aside>
+        </section>
+
+        <section id="results" class="panel" hidden>
+          <div class="result-card">
+            <p class="kicker" id="res-mode">Exam · 1 minute</p>
+            <div class="result-hero">
+              <div>
+                <span>Net KPH</span>
+                <strong id="res-kph">0</strong>
+              </div>
+              <div>
+                <span>Uncorrected accuracy</span>
+                <strong id="res-acc">0%</strong>
+              </div>
+            </div>
+            <p class="band">Band: <em id="res-band">Entry</em></p>
+            <p id="res-pb" class="pb" hidden></p>
+            <dl class="metrics">
+              <div><dt>Gross KPH</dt><dd id="res-gross">0</dd></div>
+              <div><dt>Numeric KPH</dt><dd id="res-numeric">0</dd></div>
+              <div><dt>Corrected accuracy</dt><dd id="res-corr-acc">0%</dd></div>
+              <div><dt>Corrected errors</dt><dd id="res-corrected">0</dd></div>
+              <div><dt>Uncorrected errors</dt><dd id="res-uncorrected">0</dd></div>
+              <div><dt>Checks correct</dt><dd id="res-checks">0 / 0</dd></div>
+              <div><dt>Entered total</dt><dd id="res-entered">$0.00</dd></div>
+              <div><dt>True total</dt><dd id="res-true">$0.00</dd></div>
+            </dl>
+            <p id="res-total-note" class="fine"></p>
+            <p id="res-leftover" class="fine" hidden></p>
+            <div class="ticket-actions">
+              <button id="again-btn" class="primary" type="button">Same duration again</button>
+              <button id="retry-seed-btn" class="ghost" type="button">Same checks</button>
+              <button id="pdf-session-btn" class="ghost" type="button">Session PDF</button>
+              <button id="pdf-bests-btn" class="ghost" type="button">Bests PDF</button>
+              <button id="home-btn" class="text-btn" type="button">Home</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
